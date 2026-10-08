@@ -14,16 +14,7 @@
     }
     else if (view == 2)
     {
-        <div class="add-article-form">
-            <h1>Dodaj artykul</h1>
-            <form @onsubmit="AddArticle" @onsubmit:preventDefault>
-                Guzik dzieki któremu możemy dodac zdjecie
-                <input @bind="title" class="form-control" />
-                <textarea @bind="text" class="form-control" />
-                <input @bind="author" class="form-control" />
-                <button type="submit" class="btn btn-primary">Dodaj</button>
-            </form>
-        </div>
+        <ArticleForm />
     }
     @if (view == 0)
     {
