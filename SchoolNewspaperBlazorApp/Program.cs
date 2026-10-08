@@ -19,8 +19,13 @@ namespace SchoolNewspaperBlazorApp
             options.UseSqlServer(builder.Configuration.GetConnectionString("NewspaperConnectionString")));
             //Repositry
             builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
+            builder.Services.AddScoped<IFileRepository, FileRepository>();
+
             //Services
             builder.Services.AddScoped<IArticleService, ArticleService>();
+            builder.Services.AddScoped<IFileService, FileService>();
+
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

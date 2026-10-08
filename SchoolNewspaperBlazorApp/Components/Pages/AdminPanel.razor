@@ -1,11 +1,14 @@
 ﻿@page "/adminPanel"
 @rendermode InteractiveServer
+
 @inject IArticleService articleService
+
 @using SchoolNewspaperBlazorApp.Components.Components
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 
 <div class="main-block">
+
     @if (view == 1)
     {
         <div class="article-panel">
@@ -16,35 +19,40 @@
     {
         <ArticleForm />
     }
+
     @if (view == 0)
     {
-        <button class="btn btn-primary" @onclick="LoadArticleAsync">Panel artykulow</button>
-        <button class="btn btn-primary" @onclick=" () => SetView(2)">Dodaj artykul</button>
+        <button class="btn btn-primary" @onclick="LoadArticleAsync">
+            Panel artykulow
+        </button>
+
+        <button class="btn btn-primary" @onclick="() => SetView(2)">
+            Dodaj artykul
+        </button>
     }
     else
     {
-        <button class="btn btn-primary" @onclick=" () => SetView(0)">Wróc</button>
+        <button class="btn btn-primary" @onclick="() => SetView(0)">
+            Wróc
+        </button>
     }
+
 </div>
 
-
 @code {
-    private string title = "";
-    private string text = "";
-    private string author = "";
     public int view = 0;
+
     public List<Article> articleList = new List<Article>();
-    private async Task AddArticle()
-    {
-        await articleService.AddArticleAsync(title, text, author);
-    }
+
     public void SetView(int view)
     {
         this.view = view;
     }
+
     public async Task LoadArticleAsync()
     {
         articleList = await articleService.GetAllArticlesAsync();
+
         SetView(1);
     }
 }
