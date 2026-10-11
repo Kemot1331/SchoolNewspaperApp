@@ -6,6 +6,18 @@
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 
 <div class="main-block">
+    <div class="admin-toolbar">
+        @if (view == 0)
+        {
+            <button class="btn btn-primary" @onclick="LoadArticleAsync">📋 Panel artykułów</button>
+            <button class="btn btn-primary" @onclick="() => SetView(2)">➕ Dodaj artykuł</button>
+        }
+        else
+        {
+            <button class="btn btn-outline-primary" @onclick="() => SetView(0)">← Wróć</button>
+        }
+    </div>
+
     @if (view == 1)
     {
         <div class="article-panel">
@@ -14,38 +26,16 @@
     }
     else if (view == 2)
     {
-        <div class="add-article-form">
-            <h1>Dodaj artykuł:</h1>
-            <form @onsubmit="AddArticle" @onsubmit:preventDefault>
-                <input @bind="title" class="form-control" />
-                <textarea @bind="text" class="form-control" />
-                <input @bind="author" class="form-control" />
-                <button type="submit" class="btn btn-primary">Dodaj</button>
-            </form>
-        </div>
-    }
-    @if (view == 0)
-    {
-        <button class="btn btn-primary" @onclick="LoadArticleAsync">Panel artykułów</button>
-        <button class="btn btn-primary" @onclick=" () => SetView(2)">Dodaj artykuł</button>
-    }
-    else
-    {
-        <button class="btn btn-primary" @onclick=" () => SetView(0)">Powrót</button>
+        <ArticleForm />
     }
 </div>
 
 
 @code {
-    private string title = "";
-    private string text = "";
-    private string author = "";
+
     public int view = 0;
     public List<Article> articleList = new List<Article>();
-    private async Task AddArticle()
-    {
-        await articleService.AddArticleAsync(title, text, author);
-    }
+
     public void SetView(int view)
     {
         this.view = view;
