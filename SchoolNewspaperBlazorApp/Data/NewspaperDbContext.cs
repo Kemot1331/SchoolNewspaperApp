@@ -8,9 +8,10 @@ namespace SchoolNewspaperBlazorApp.Data
             : base(options) {}
         public DbSet<Article> Articles { get; set; }
         public DbSet<MediaFile> Files { get; set; }
-        protected override void OnModelCreating(ModelBuilder mb)
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            mb.Entity<MediaFile>()
+            modelBuilder.Entity<MediaFile>()
                 .Property(x => x.Id)
                 .ValueGeneratedNever();
         }

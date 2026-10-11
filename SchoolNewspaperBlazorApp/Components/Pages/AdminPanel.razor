@@ -1,22 +1,13 @@
 ﻿@page "/adminPanel"
 @rendermode InteractiveServer
+
 @inject IArticleService articleService
+
 @using SchoolNewspaperBlazorApp.Components.Components
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 
 <div class="main-block">
-    <div class="admin-toolbar">
-        @if (view == 0)
-        {
-            <button class="btn btn-primary" @onclick="LoadArticleAsync">📋 Panel artykułów</button>
-            <button class="btn btn-primary" @onclick="() => SetView(2)">➕ Dodaj artykuł</button>
-        }
-        else
-        {
-            <button class="btn btn-outline-primary" @onclick="() => SetView(0)">← Wróć</button>
-        }
-    </div>
 
     @if (view == 1)
     {
@@ -28,21 +19,40 @@
     {
         <ArticleForm />
     }
+
+    @if (view == 0)
+    {
+        <button class="btn btn-primary" @onclick="LoadArticleAsync">
+            Panel artykulow
+        </button>
+
+        <button class="btn btn-primary" @onclick="() => SetView(2)">
+            Dodaj artykul
+        </button>
+    }
+    else
+    {
+        <button class="btn btn-primary" @onclick="() => SetView(0)">
+            Wróc
+        </button>
+    }
+
 </div>
 
-
 @code {
-
     public int view = 0;
+
     public List<Article> articleList = new List<Article>();
 
     public void SetView(int view)
     {
         this.view = view;
     }
+
     public async Task LoadArticleAsync()
     {
         articleList = await articleService.GetAllArticlesAsync();
+
         SetView(1);
     }
 }

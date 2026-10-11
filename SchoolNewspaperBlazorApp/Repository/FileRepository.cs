@@ -7,32 +7,26 @@ namespace SchoolNewspaperBlazorApp.Repository
     public class FileRepository : IFileRepository
     {
         private readonly NewspaperDbContext _context;
+
         public FileRepository(NewspaperDbContext context)
         {
             _context = context;
         }
+
         public async Task<int> GetLastFileId()
         {
             var id = await _context.Files
                 .OrderByDescending(x => x.Id)
                 .Select(x => x.Id)
                 .FirstOrDefaultAsync();
-            return id + 1;
+
+            return id++;
         }
-        public async Task<MediaFile> GetFileByIdAsync(int id)
-        {
-            var fileId = await _context.Files.FirstOrDefaultAsync(a => a.Id == id);
-            if(fileId == null)
-            {
-                throw new Exception("[FileRepository]Brak zdjecia w bazie danych");
-            }
-            return fileId;
-        }
-        public async Task AddFileAsync(Data.MediaFile file)
+
+        public async Task AddFileAsync(MediaFile file)
         {
             await _context.Files.AddAsync(file);
             await _context.SaveChangesAsync();
         }
-
     }
 }

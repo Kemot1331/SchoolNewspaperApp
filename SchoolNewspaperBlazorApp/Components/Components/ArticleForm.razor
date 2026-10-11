@@ -1,55 +1,58 @@
 ﻿@using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
+
 @inject IArticleService articleService
 @inject IFileService fileService
 
 <div class="add-article-form">
-    <h1 class="add-article-form__title">Dodaj artykuł</h1>
+    <h1>Dodaj artykul</h1>
 
-@if (previewImage != null)
-{
-        <div class="image-preview">
-            <img src="@previewImage" alt="zdjęcie" />
+    @if (!string.IsNullOrEmpty(previewImage))
+    {
+        <div class="preview-image">
+            <img src="@previewImage" alt="zdjecie" />
         </div>
-}
+    }
 
-    <label class="form-label">Zdjęcie</label>
-    <InputFile OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
+    <InputFile OnChange="ChoosePhoto" accept="image/*" />
 
     <form @onsubmit="AddArticle" @onsubmit:preventDefault>
-        <label class="form-label">Tytuł</label>
-        <input @bind="title" class="form-control mb-3" placeholder="Wpisz tytuł..." />
+        <input @bind="Title" class="form-control" placeholder="Tytuł" />
 
-        <label class="form-label">Treść</label>
-        <textarea @bind="text" class="form-control mb-3" rows="6" placeholder="Treść artykułu..."></textarea>
+        <textarea @bind="Text" class="form-control" placeholder="Treść"></textarea>
 
-        <label class="form-label">Autor</label>
-        <input @bind="author" class="form-control mb-4" placeholder="Imię i nazwisko" />
+        <input @bind="Author" class="form-control" placeholder="Autor" />
 
-        <button type="submit" class="btn btn-primary w-100">Dodaj</button>
+        <button type="submit" class="btn btn-primary">
+            Dodaj
+        </button>
     </form>
 </div>
 
 @code {
-    private string title = "";
-    private string text = "";
-    private string author = "";
+    public string Title { get; set; } = "";
+    public string Text { get; set; } = "";
+    public string Author { get; set; } = "";
+
     private string? previewImage;
-    IBrowserFile? file;
+
+    // Przechowujemy tutaj wybrane zdjęcie
+    private IBrowserFile? file;
+
     private async Task ChoosePhoto(InputFileChangeEventArgs e)
     {
         file = e.File;
+
         previewImage = await fileService.GetPreviewAsync(file);
     }
 
     private async Task AddArticle()
     {
         int id = 0;
-        if(file != null)
+        if (file != null)
         {
-        id = await fileService.UploadImage(file);
+            id = await fileService.UploadImage(file);
         }
-        await articleService.AddArticleAsync(title, text, author,id);
+        await articleService.AddArticleAsync(Title, Text, Author, id);
     }
 }
-

@@ -29,6 +29,7 @@ namespace SchoolNewspaperBlazorApp
             builder.Services.AddScoped<IArticleService, ArticleService>();
             builder.Services.AddScoped<IFileService, FileService>();
 
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
