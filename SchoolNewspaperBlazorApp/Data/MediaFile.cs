@@ -1,4 +1,7 @@
-﻿namespace SchoolNewspaperBlazorApp.Data
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace SchoolNewspaperBlazorApp.Data
 {
     public class MediaFile
     {

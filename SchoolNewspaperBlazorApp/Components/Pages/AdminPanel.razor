@@ -9,8 +9,9 @@
     <div class="admin-toolbar">
         @if (view == 0)
         {
-            <button class="btn btn-primary" @onclick="LoadArticleAsync">📋 Panel artykułów</button>
-            <button class="btn btn-primary" @onclick="() => SetView(2)">➕ Dodaj artykuł</button>
+            <button class="btn btn-primary" @onclick="LoadArticleAsync">Panel artykułów</button>
+            <button class="btn btn-primary" @onclick="() => SetView(2)">Dodaj artykuł</button>
+            <button class="btn btn-primary" @onclick="() => SetView(3)">Dodaj użytkownika</button>
         }
         else
         {
@@ -20,13 +21,15 @@
 
     @if (view == 1)
     {
-        <div class="article-panel">
-            <ArticleCard Articles="articleList" permissions="true" />
-        </div>
+        <ArticleCard Articles="articleList" permissions="true" />
     }
     else if (view == 2)
     {
         <ArticleForm />
+    }
+    else if (view == 3)
+    {
+        <AddUserFrom />
     }
 </div>
 

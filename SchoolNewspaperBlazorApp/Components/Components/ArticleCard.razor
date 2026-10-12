@@ -1,44 +1,73 @@
 ﻿@using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
-<div class="article-grid">
-    @foreach (var article in Articles)
-    {
-        if (permissions == true)
+
+@if (Articles.Count == 0)
+{
+    <p class="empty-state">Nie ma jeszcze żadnych artykułów.</p>
+}
+else
+{
+    <div class="article-grid">
+        @for (var i = 0; i < Articles.Count; i++)
         {
-            <div class="article-card">
-                <div class="article-card__img-wrap">
-                    <img src="@GetImageUrl(article.FileId)" class="article-card__img" alt="@article.Title" loading="lazy">
-                </div>
-                <div class="article-card__body">
-                    <h5 class="article-card__title">@article.Title</h5>
-                    <p class="article-card__text">@article.Text</p>
-                    <div class="article-card__footer">
-                        <span class="article-card__author">@article.Author</span>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
-                            Usuń artykuł
-                        </button>
+            var article = Articles[i];
+            var imageUrl = GetImageUrl(article.FileId);
+            var hasImage = !string.IsNullOrEmpty(imageUrl);
+            var initial = string.IsNullOrWhiteSpace(article.Title) ? "G" : article.Title.Trim()[0].ToString().ToUpperInvariant();
+
+            if (permissions == true)
+            {
+                <div class="article-card">
+                    <div class="article-card__img-wrap @(hasImage ? "" : "article-card__img-wrap--empty")">
+                        @if (hasImage)
+                        {
+                            <img src="@imageUrl" class="article-card__img" alt="@article.Title" loading="lazy">
+                        }
+                        else
+                        {
+                            <span aria-hidden="true">@initial</span>
+                        }
+                    </div>
+                    <div class="article-card__body">
+                        <h5 class="article-card__title">@article.Title</h5>
+                        <p class="article-card__text">@article.Text</p>
+                        <div class="article-card__footer">
+                            <span class="article-card__author">@article.Author</span>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
+                                Usuń artykuł
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        }
-        else
-        {
-            <NavLink class="article-card article-card--link" href="@($"/article/{article.Id}")">
-                <div class="article-card__img-wrap">
-                    <img src="@GetImageUrl(article.FileId)" class="article-card__img" alt="@article.Title" loading="lazy">
-                </div>
-                <div class="article-card__body">
-                    <h5 class="article-card__title">@article.Title</h5>
-                    <p class="article-card__text">@article.Text</p>
-                    <div class="article-card__footer">
-                        <span class="article-card__author">@article.Author</span>
-                        <span class="article-card__more">Czytaj więcej →</span>
+            }
+            else
+            {
+                var featured = i == 0;
+
+                <NavLink class="@($"article-card article-card--link {(featured ? "article-card--featured" : "")}")" href="@($"/article/{article.Id}")">
+                    <div class="article-card__img-wrap @(hasImage ? "" : "article-card__img-wrap--empty")">
+                        @if (hasImage)
+                        {
+                            <img src="@imageUrl" class="article-card__img" alt="@article.Title" loading="lazy">
+                        }
+                        else
+                        {
+                            <span aria-hidden="true">@initial</span>
+                        }
                     </div>
-                </div>
-            </NavLink>
+                    <div class="article-card__body">
+                        <h5 class="article-card__title">@article.Title</h5>
+                        <p class="article-card__text">@article.Text</p>
+                        <div class="article-card__footer">
+                            <span class="article-card__author">@article.Author</span>
+                            <span class="article-card__more">Czytaj więcej</span>
+                        </div>
+                    </div>
+                </NavLink>
+            }
         }
-    }
-</div>
+    </div>
+}
 
 @code {
     [Parameter]

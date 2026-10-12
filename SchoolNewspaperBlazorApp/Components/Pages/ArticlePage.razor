@@ -5,7 +5,14 @@
 
 @if (article != null)
 {
+    <PageTitle>@article.Title</PageTitle>
+
     <article class="article-page">
+        <a class="article-page__back" href="/">← Wszystkie artykuły</a>
+
+        <h1 class="article-page__title">@article.Title</h1>
+
+        <p class="article-page__meta">Autor: <span class="article-page__author">@article.Author</span></p>
 
         @if (!string.IsNullOrEmpty(imageUrl))
         {
@@ -14,15 +21,11 @@
             </div>
         }
 
-        <h1 class="article-page__title">@article.Title</h1>
-
-
         <div class="article-page__content">
-            @article.Text
-        </div>
-
-        <div class="article-page__meta">
-            <span class="article-page__author">@article.Author</span>
+            @foreach (var paragraph in Paragraphs)
+            {
+                <p>@paragraph</p>
+            }
         </div>
     </article>
 }
@@ -39,6 +42,9 @@
 
     [Inject]
     public IFileService fileService { get; set; } = default!;
+
+    private IEnumerable<string> Paragraphs =>
+        (article?.Text ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     protected override async Task OnInitializedAsync()
     {

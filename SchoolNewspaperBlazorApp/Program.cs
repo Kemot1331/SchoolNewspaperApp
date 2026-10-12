@@ -24,10 +24,12 @@ namespace SchoolNewspaperBlazorApp
             //Repositry
             builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
             builder.Services.AddScoped<IFileRepository, FileRepository>();
+            builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 
             //Services
             builder.Services.AddScoped<IArticleService, ArticleService>();
             builder.Services.AddScoped<IFileService, FileService>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
             var app = builder.Build();
 
@@ -43,7 +45,7 @@ namespace SchoolNewspaperBlazorApp
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider
-                (@"C:\Users\Praktyka\source\repos\SchoolNewspaperBlazorApp\Images"),
+                (@"C:\Users\Admin\Desktop\SchoolNewspaperBlazorApp"),
                 RequestPath = "/Images"
             });
 

@@ -1,0 +1,69 @@
+﻿@page "/loginPage"
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Logowanie</PageTitle>
+
+<div class="add-article-form login-form">
+    <h1 class="add-article-form__title">Logowanie</h1>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="form-error" role="alert">@error</p>
+    }
+
+    <EditForm Model="Input" FormName="login" OnValidSubmit="LoginAsync">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label" for="login">Login</label>
+            <InputText id="login" @bind-Value="Input.Login" class="form-control" autocomplete="username" />
+            <ValidationMessage For="() => Input.Login" />
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label" for="password">Hasło</label>
+            <InputText id="password" type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" />
+            <ValidationMessage For="() => Input.Password" />
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Zaloguj się</button>
+    </EditForm>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginModel Input { get; set; } = new();
+
+    private string? error;
+
+    private async Task LoginAsync()
+    {
+        error = null;
+
+        var success = await AuthenticateAsync(Input.Login, Input.Password);
+        if (!success)
+        {
+            error = "Nieprawidłowy login lub hasło.";
+            return;
+        }
+
+        // po udanym logowaniu przekieruj, np.:
+        // NavigationManager.NavigateTo("/adminPanel");
+    }
+
+    // TODO: tu podepnij swoje sprawdzanie użytkownika (Identity / własny serwis).
+    // Na razie zawsze zwraca false, więc formularz pokaże komunikat o błędzie.
+    private Task<bool> AuthenticateAsync(string login, string password)
+    {
+        return Task.FromResult(false);
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Podaj login.")]
+        public string Login { get; set; } = "";
+
+        [Required(ErrorMessage = "Podaj hasło.")]
+        public string Password { get; set; } = "";
+    }
+}

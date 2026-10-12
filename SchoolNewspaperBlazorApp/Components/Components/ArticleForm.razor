@@ -6,15 +6,20 @@
 <div class="add-article-form">
     <h1 class="add-article-form__title">Dodaj artykuł</h1>
 
-@if (previewImage != null)
-{
+    @if (saved)
+    {
+        <p class="form-status" role="status">Artykuł został dodany.</p>
+    }
+
+    @if (previewImage != null)
+    {
         <div class="image-preview">
-            <img src="@previewImage" alt="zdjęcie" />
+            <img src="@previewImage" alt="Podgląd zdjęcia" />
         </div>
-}
+    }
 
     <label class="form-label">Zdjęcie</label>
-    <InputFile OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
+    <InputFile @key="formKey" OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
 
     <form @onsubmit="AddArticle" @onsubmit:preventDefault>
         <label class="form-label">Tytuł</label>
@@ -26,7 +31,7 @@
         <label class="form-label">Autor</label>
         <input @bind="author" class="form-control mb-4" placeholder="Imię i nazwisko" />
 
-        <button type="submit" class="btn btn-primary w-100">Dodaj</button>
+        <button type="submit" class="btn btn-primary w-100">Dodaj artykuł</button>
     </form>
 </div>
 
@@ -35,9 +40,13 @@
     private string text = "";
     private string author = "";
     private string? previewImage;
+    private bool saved;
+    private int formKey;
     IBrowserFile? file;
+
     private async Task ChoosePhoto(InputFileChangeEventArgs e)
     {
+        saved = false;
         file = e.File;
         previewImage = await fileService.GetPreviewAsync(file);
     }
@@ -47,9 +56,17 @@
         int id = 0;
         if(file != null)
         {
-        id = await fileService.UploadImage(file);
+            id = await fileService.UploadImage(file);
         }
-        await articleService.AddArticleAsync(title, text, author,id);
+        await articleService.AddArticleAsync(title, text, author, id);
+
+        // czyścimy formularz, żeby nie dodać tego samego artykułu dwa razy
+        title = "";
+        text = "";
+        author = "";
+        file = null;
+        previewImage = null;
+        formKey++;
+        saved = true;
     }
 }
-
