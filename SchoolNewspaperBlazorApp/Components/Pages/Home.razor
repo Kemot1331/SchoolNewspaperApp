@@ -2,14 +2,61 @@
 @using SchoolNewspaperBlazorApp.Components.Components
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
-@inject IArticleService articleService;
+@inject IArticleService articleService
 
-<ArticleCard Articles="articles" permissions="false"/>
+<PageTitle>Gazetka szkolna</PageTitle>
 
+<section class="hero">
+    <div class="hero__content">
+        <p class="hero__kicker">Gazetka szkolna</p>
+        <h1 class="hero__title">Co nowego w szkole</h1>
+        <p class="hero__lead">Wiadomości, wydarzenia i ogłoszenia w jednym miejscu.</p>
 
-@code 
+        <div class="hero__actions">
+            <a class="btn btn-accent" href="#aktualnosci">Czytaj najnowsze</a>
+            <span class="hero__chip">@articles.Count @ArticlesLabel(articles.Count)</span>
+        </div>
+    </div>
+</section>
+
+<section id="aktualnosci" class="news-section">
+    <div class="section-head">
+        <h2 class="section-head__title">
+            @(HasQuery ? "Wyniki wyszukiwania" : "Najnowsze artykuły")
+        </h2>
+
+        @if (HasQuery)
+        {
+            <p class="search-note">
+                Znaleziono @Filtered.Count dla „@Query” · <a href="/">wyczyść</a>
+            </p>
+        }
+    </div>
+
+    <ArticleCard Articles="Filtered" permissions="false" />
+</section>
+
+@code
 {
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? Query { get; set; }
+
     public List<Article> articles = new List<Article>();
+
+    private bool HasQuery => !string.IsNullOrWhiteSpace(Query);
+
+    private List<Article> Filtered => !HasQuery
+        ? articles
+        : articles.Where(a => Matches(a.Title) || Matches(a.Text) || Matches(a.Author)).ToList();
+
+    private bool Matches(string? value) =>
+        value?.Contains(Query!.Trim(), StringComparison.CurrentCultureIgnoreCase) == true;
+
+    private static string ArticlesLabel(int n) =>
+        n == 1 ? "artykuł"
+        : (n % 10 is >= 2 and <= 4 && n % 100 is not (>= 12 and <= 14)) ? "artykuły"
+        : "artykułów";
+
     protected override async Task OnInitializedAsync()
     {
         articles = await articleService.GetAllArticlesAsync();

@@ -1,37 +1,100 @@
 ﻿@inherits LayoutComponentBase
+@using System.Globalization
 
-<nav class="navbar navbar-expand-lg bg-dark navbar-dark shadow">
-    <div class="container">
+<input type="checkbox" id="nav-toggle" class="nav-toggle visually-hidden" aria-label="Otwórz menu" />
+<input type="checkbox" id="a11y-toggle" class="a11y-toggle visually-hidden" aria-label="Większy tekst" />
 
-        <a class="navbar-brand fw-bold fs-4" href="/">
-            📰 Gazetka szkolna
+<div class="dateline">
+    <div class="dateline__inner container layout-width">
+        <span class="dateline__date">@Today</span>
+        <span class="dateline__right">Rok szkolny @SchoolYear</span>
+    </div>
+</div>
+
+<header class="masthead">
+    <div class="masthead__inner container layout-width">
+        <label for="nav-toggle" class="hamburger" aria-hidden="true">
+            <span></span><span></span><span></span>
+        </label>
+
+        <a class="masthead__brand" href="/">
+            <span class="masthead__name">Gazetka szkolna</span>
+            <span class="masthead__tag">Wiadomości · Wydarzenia · Ogłoszenia</span>
         </a>
 
-        <div class="navbar-nav ms-4">
-            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Strona główna</NavLink>
-            <NavLink class="nav-link" href="/aktualnosci">Aktualności</NavLink>
-            <NavLink class="nav-link" href="/wydarzenia">Wydarzenia</NavLink>
-            <NavLink class="nav-link" href="/kontakt">Kontakt</NavLink>
-            <NavLink class="nav-link" href="/adminPanel">Admin Panel</NavLink>
-            <NavLink class="nav-link" href="/loginPage">Zaloguj się</NavLink>
-        </div>
+        <a class="masthead__logo" href="/" aria-label="Strona główna">
+            <img src="favicon.png" alt="" />
+        </a>
+    </div>
+</header>
 
-        <form class="btn btn-search" role="search">
-            <input class="form-control me-2"
-                   type="search"
-                   placeholder="Szukaj..."
-                   aria-label="Szukaj" />
+<label for="nav-toggle" class="drawer-backdrop" aria-hidden="true"></label>
 
-            <button class="btn" type="submit">
-                Szukaj
-            </button>
-        </form>
+<nav class="drawer" aria-label="Menu główne"
+     onclick="if (event.target.closest('a')) document.getElementById('nav-toggle').checked = false">
+    <label for="nav-toggle" class="drawer__close" aria-hidden="true">×</label>
 
+    <div class="drawer__brand">
+        <span class="drawer__brand-name">Gazetka szkolna</span>
+        <span class="drawer__brand-tag">Menu</span>
+    </div>
+
+    <form class="drawer__search" role="search" method="get" action="/">
+        <input class="form-control" type="search" name="q" placeholder="Szukaj artykułów..." aria-label="Szukaj" />
+        <button class="btn btn-primary btn-sm" type="submit">Szukaj</button>
+    </form>
+
+    <div class="drawer__links">
+        <NavLink href="/" Match="NavLinkMatch.All">Strona główna</NavLink>
+        <NavLink href="/aktualnosci">Aktualności</NavLink>
+        <NavLink href="/wydarzenia">Wydarzenia</NavLink>
+        <NavLink href="/kontakt">Kontakt</NavLink>
+
+        <p class="drawer__label">Dla redakcji</p>
+        <NavLink href="/adminPanel">Admin Panel</NavLink>
+        <NavLink href="/loginPage">Zaloguj się</NavLink>
     </div>
 </nav>
 
-<main class="container py-4">
+<label for="a11y-toggle" class="a11y-tab" title="Większy tekst" aria-hidden="true">
+    <svg viewBox="0 0 48 48" width="28" height="28" fill="none" stroke="currentColor"
+         stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="24" cy="24" r="19" />
+        <circle cx="24" cy="14" r="2.2" />
+        <path d="M13 20c7 2 15 2 22 0M24 22v8M24 30l-5 8M24 30l5 8" />
+    </svg>
+</label>
+
+<main class="site-main container layout-width">
     @Body
 </main>
 
+<footer class="site-footer">
+    <div class="site-footer__inner container layout-width">
+        <div class="site-footer__brand">
+            <span class="site-footer__name">Gazetka szkolna</span>
+            <span>© @DateTime.Now.Year · Wszystkie prawa zastrzeżone</span>
+        </div>
+        <nav class="site-footer__links" aria-label="Linki w stopce">
+            <a href="/">Strona główna</a>
+            <a href="/adminPanel">Panel administratora</a>
+            <a href="/loginPage">Logowanie</a>
+        </nav>
+    </div>
+</footer>
 
+@code {
+    private static readonly CultureInfo Pl = new("pl-PL");
+
+    private string Today => DateTime.Now.ToString("dddd, d MMMM yyyy", Pl);
+
+    private string SchoolYear
+    {
+        get
+        {
+            var now = DateTime.Now;
+            var start = now.Month >= 9 ? now.Year : now.Year - 1;
+            return $"{start}/{start + 1}";
+        }
+    }
+}

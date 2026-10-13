@@ -12,13 +12,18 @@
 
         <h1 class="article-page__title">@article.Title</h1>
 
-        <p class="article-page__meta">Autor: <span class="article-page__author">@article.Author</span></p>
+        <div class="article-page__meta">
+            <span class="avatar" aria-hidden="true">@AuthorInitial</span>
+            <span>Autor: <span class="article-page__author">@article.Author</span></span>
+            <span class="article-page__dot" aria-hidden="true">•</span>
+            <span>@ReadingMinutes min czytania</span>
+        </div>
 
         @if (!string.IsNullOrEmpty(imageUrl))
         {
-            <div class="article-page__img-wrap">
+            <figure class="article-page__img-wrap">
                 <img src="@imageUrl" alt="@article.Title" class="article-page__img" />
-            </div>
+            </figure>
         }
 
         <div class="article-page__content">
@@ -28,6 +33,15 @@
             }
         </div>
     </article>
+}
+else
+{
+    <PageTitle>Nie znaleziono artykułu</PageTitle>
+
+    <div class="empty-state">
+        <strong>Nie znaleziono artykułu</strong>
+        <span>Być może został usunięty. <a href="/">Wróć na stronę główną</a>.</span>
+    </div>
 }
 
 @code {
@@ -45,6 +59,19 @@
 
     private IEnumerable<string> Paragraphs =>
         (article?.Text ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private string AuthorInitial =>
+        string.IsNullOrWhiteSpace(article?.Author) ? "?" : article!.Author.Trim()[0].ToString().ToUpperInvariant();
+
+    private int ReadingMinutes
+    {
+        get
+        {
+            var words = (article?.Text ?? "")
+                .Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            return Math.Max(1, (int)Math.Ceiling(words / 200.0));
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

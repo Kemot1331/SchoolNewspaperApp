@@ -1,30 +1,70 @@
 @rendermode InteractiveServer
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 
-<form @onsubmit="() => AddUser()" @onsubmit:preventDefault>
-    <label class="form-label">Tytuł</label>
-    <input @bind="Login" class="form-control mb-3" placeholder="Login" />
+<div class="add-article-form">
+    <h2 class="add-article-form__title">Dodaj użytkownika</h2>
 
-    <label class="form-label">E-mail</label>
-    <input @bind="Email" class="form-control mb-4" placeholder="E-Mail" />
+    @if (saved)
+    {
+        <p class="form-status" role="status">Użytkownik został dodany.</p>
+    }
 
-    <label class="form-label">Treść</label>
-    <input @bind="Password" class="form-control mb-4" placeholder="Hasło" />
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="form-error" role="alert">@error</p>
+    }
 
-    <button type="submit" class="btn btn-primary w-100">Dodaj</button>
-</form>
+    <form @onsubmit="AddUser" @onsubmit:preventDefault>
+        <label class="form-label" for="new-login">Login</label>
+        <input id="new-login" @bind="Login" @bind:event="oninput" class="form-control mb-3"
+               placeholder="Login" autocomplete="off" />
+
+        <label class="form-label" for="new-email">E-mail</label>
+        <input id="new-email" type="email" @bind="Email" @bind:event="oninput" class="form-control mb-3"
+               placeholder="adres@szkola.pl" autocomplete="off" />
+
+        <label class="form-label" for="new-password">Hasło</label>
+        <input id="new-password" type="password" @bind="Password" @bind:event="oninput" class="form-control mb-4"
+               placeholder="Hasło" autocomplete="new-password" />
+
+        <button type="submit" class="btn btn-primary w-100">Dodaj użytkownika</button>
+    </form>
+</div>
 
 @code {
 
-    public required string Login { get; set; }
-    public required string Password { get; set; }
-    public required string Email { get; set; }
+    public string Login { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string Email { get; set; } = "";
 
     [Inject]
-    public IAuthService AuthService { get; set; }
+    public IAuthService AuthService { get; set; } = default!;
+
+    private bool saved;
+    private string? error;
 
     public async Task AddUser()
     {
-        await AuthService.AddUserAsync(Login, Password, Email);
+        saved = false;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(Login) || string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+        {
+            error = "Uzupełnij login, e-mail i hasło.";
+            return;
+        }
+
+        try
+        {
+            await AuthService.AddUserAsync(Login, Password, Email);
+            saved = true;
+            Login = "";
+            Email = "";
+            Password = "";
+        }
+        catch (Exception)
+        {
+            error = "Nie udało się dodać użytkownika.";
+        }
     }
 }

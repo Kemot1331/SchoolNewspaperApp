@@ -3,31 +3,43 @@
 
 <PageTitle>Logowanie</PageTitle>
 
-<div class="add-article-form login-form">
-    <h1 class="add-article-form__title">Logowanie</h1>
-
-    @if (!string.IsNullOrEmpty(error))
-    {
-        <p class="form-error" role="alert">@error</p>
-    }
-
-    <EditForm Model="Input" FormName="login" OnValidSubmit="LoginAsync">
-        <DataAnnotationsValidator />
-
-        <div class="mb-3">
-            <label class="form-label" for="login">Login</label>
-            <InputText id="login" @bind-Value="Input.Login" class="form-control" autocomplete="username" />
-            <ValidationMessage For="() => Input.Login" />
+<div class="auth">
+    <div class="form-card form-card--narrow">
+        <div class="auth__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <rect x="4" y="10.5" width="16" height="10" rx="2.5" />
+                <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+            </svg>
         </div>
 
-        <div class="mb-4">
-            <label class="form-label" for="password">Hasło</label>
-            <InputText id="password" type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" />
-            <ValidationMessage For="() => Input.Password" />
-        </div>
+        <h1 class="form-card__title">Logowanie</h1>
+        <p class="form-card__lead">Zaloguj się, aby zarządzać artykułami i użytkownikami.</p>
 
-        <button type="submit" class="btn btn-primary w-100">Zaloguj się</button>
-    </EditForm>
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <p class="form-error" role="alert">@error</p>
+        }
+
+        <EditForm Model="Input" FormName="login" OnValidSubmit="LoginAsync">
+            <DataAnnotationsValidator />
+
+            <div class="field">
+                <label class="form-label" for="login">Login</label>
+                <InputText id="login" @bind-Value="Input.Login" class="form-control" autocomplete="username" />
+                <ValidationMessage For="() => Input.Login" />
+            </div>
+
+            <div class="field">
+                <label class="form-label" for="password">Hasło</label>
+                <InputText id="password" type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" />
+                <ValidationMessage For="() => Input.Password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mt-2">Zaloguj się</button>
+        </EditForm>
+
+        <a class="form-card__back" href="/">← Wróć na stronę główną</a>
+    </div>
 </div>
 
 @code {

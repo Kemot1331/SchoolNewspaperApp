@@ -5,20 +5,33 @@
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 
-<div class="main-block">
-    <div class="admin-toolbar">
-        @if (view == 0)
-        {
-            <button class="btn btn-primary" @onclick="LoadArticleAsync">Panel artykułów</button>
-            <button class="btn btn-primary" @onclick="() => SetView(2)">Dodaj artykuł</button>
-            <button class="btn btn-primary" @onclick="() => SetView(3)">Dodaj użytkownika</button>
-        }
-        else
-        {
-            <button class="btn btn-outline-primary" @onclick="() => SetView(0)">← Wróć</button>
-        }
-    </div>
+<PageTitle>Panel administratora</PageTitle>
 
+<section class="admin-head">
+    <p class="admin-head__kicker">Panel redakcji</p>
+    <h1 class="admin-head__title">Panel administratora</h1>
+    <p class="admin-head__lead">Zarządzaj artykułami i kontami redaktorów.</p>
+
+    <div class="admin-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="@(view == 1 ? "true" : "false")"
+                class="admin-tab @(view == 1 ? "admin-tab--active" : "")"
+                @onclick="LoadArticleAsync">
+            Artykuły <span class="count-pill">@articleList.Count</span>
+        </button>
+        <button type="button" role="tab" aria-selected="@(view == 2 ? "true" : "false")"
+                class="admin-tab @(view == 2 ? "admin-tab--active" : "")"
+                @onclick="() => SetView(2)">
+            Dodaj artykuł
+        </button>
+        <button type="button" role="tab" aria-selected="@(view == 3 ? "true" : "false")"
+                class="admin-tab @(view == 3 ? "admin-tab--active" : "")"
+                @onclick="() => SetView(3)">
+            Dodaj użytkownika
+        </button>
+    </div>
+</section>
+
+<div class="admin-body" @key="view">
     @if (view == 1)
     {
         <ArticleCard Articles="articleList" permissions="true" />
@@ -33,16 +46,21 @@
     }
 </div>
 
-
 @code {
 
-    public int view = 0;
+    public int view = 1;
     public List<Article> articleList = new List<Article>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        articleList = await articleService.GetAllArticlesAsync();
+    }
 
     public void SetView(int view)
     {
         this.view = view;
     }
+
     public async Task LoadArticleAsync()
     {
         articleList = await articleService.GetAllArticlesAsync();

@@ -1,20 +1,76 @@
-﻿<form @onsubmit:preventDefault>
-    <label class="form-label">Tytuł</label>
-    <input @bind="Login" class="form-control mb-3" placeholder="Login" />
+﻿@rendermode InteractiveServer
+@using SchoolNewspaperBlazorApp.Interfaces.Service
 
-    <label class="form-label">E-mail</label>
-    <input @bind="Email" class="form-control mb-4" placeholder="E-Mail" />
+<div class="form-card">
+    <h2 class="form-card__title">Dodaj użytkownika</h2>
 
-    <label class="form-label">Treść</label>
-    <input @bind="Password" class="form-control mb-4" placeholder="Hasło" />
+    @if (saved)
+    {
+        <p class="form-status" role="status">Użytkownik został dodany.</p>
+    }
 
-    <button type="submit" class="btn btn-primary w-100">Dodaj</button>
-</form>
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="form-error" role="alert">@error</p>
+    }
+
+    <form @onsubmit="AddUser" @onsubmit:preventDefault>
+        <div class="field">
+            <label class="form-label" for="new-login">Login</label>
+            <input id="new-login" @bind="Login" @bind:event="oninput" class="form-control"
+                   placeholder="Login" autocomplete="off" />
+        </div>
+
+        <div class="field">
+            <label class="form-label" for="new-email">E-mail</label>
+            <input id="new-email" type="email" @bind="Email" @bind:event="oninput" class="form-control"
+                   placeholder="adres@szkola.pl" autocomplete="off" />
+        </div>
+
+        <div class="field">
+            <label class="form-label" for="new-password">Hasło</label>
+            <input id="new-password" type="password" @bind="Password" @bind:event="oninput" class="form-control"
+                   placeholder="Hasło" autocomplete="new-password" />
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 mt-2">Dodaj użytkownika</button>
+    </form>
+</div>
 
 @code {
 
-    public required string Login { get; set; }
-    public required string Password { get; set; }
-    public required string Email { get; set; }
+    public string Login { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string Email { get; set; } = "";
 
+    [Inject]
+    public IAuthService AuthService { get; set; } = default!;
+
+    private bool saved;
+    private string? error;
+
+    public async Task AddUser()
+    {
+        saved = false;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(Login) || string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+        {
+            error = "Uzupełnij login, e-mail i hasło.";
+            return;
+        }
+
+        try
+        {
+            await AuthService.AddUserAsync(Login, Password, Email);
+            saved = true;
+            Login = "";
+            Email = "";
+            Password = "";
+        }
+        catch (Exception)
+        {
+            error = "Nie udało się dodać użytkownika.";
+        }
+    }
 }

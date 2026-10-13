@@ -3,8 +3,8 @@
 @inject IArticleService articleService
 @inject IFileService fileService
 
-<div class="add-article-form">
-    <h1 class="add-article-form__title">Dodaj artykuł</h1>
+<div class="form-card">
+    <h2 class="form-card__title">Dodaj artykuł</h2>
 
     @if (saved)
     {
@@ -18,20 +18,36 @@
         </div>
     }
 
-    <label class="form-label">Zdjęcie</label>
-    <InputFile @key="formKey" OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
+    <div class="field">
+        <label class="form-label" for="photo">Zdjęcie</label>
+        <div class="dropzone">
+            <svg class="dropzone__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 16V4M7 9l5-5 5 5" />
+                <path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16" />
+            </svg>
+            <span class="dropzone__title">@(file is null ? "Przeciągnij zdjęcie lub kliknij, aby wybrać" : file.Name)</span>
+            <span class="dropzone__hint">JPG, PNG lub WebP</span>
+            <InputFile id="photo" @key="formKey" OnChange="ChoosePhoto" accept="image/*" class="dropzone__input" />
+        </div>
+    </div>
 
     <form @onsubmit="AddArticle" @onsubmit:preventDefault>
-        <label class="form-label">Tytuł</label>
-        <input @bind="title" class="form-control mb-3" placeholder="Wpisz tytuł..." />
+        <div class="field">
+            <label class="form-label" for="title">Tytuł</label>
+            <input id="title" @bind="title" class="form-control" placeholder="Wpisz tytuł..." />
+        </div>
 
-        <label class="form-label">Treść</label>
-        <textarea @bind="text" class="form-control mb-3" rows="6" placeholder="Treść artykułu..."></textarea>
+        <div class="field">
+            <label class="form-label" for="text">Treść</label>
+            <textarea id="text" @bind="text" class="form-control" rows="6" placeholder="Treść artykułu..."></textarea>
+        </div>
 
-        <label class="form-label">Autor</label>
-        <input @bind="author" class="form-control mb-4" placeholder="Imię i nazwisko" />
+        <div class="field">
+            <label class="form-label" for="author">Autor</label>
+            <input id="author" @bind="author" class="form-control" placeholder="Imię i nazwisko" />
+        </div>
 
-        <button type="submit" class="btn btn-primary w-100">Dodaj artykuł</button>
+        <button type="submit" class="btn btn-primary w-100 mt-2">Dodaj artykuł</button>
     </form>
 </div>
 

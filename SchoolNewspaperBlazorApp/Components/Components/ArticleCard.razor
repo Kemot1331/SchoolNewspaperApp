@@ -3,7 +3,10 @@
 
 @if (Articles.Count == 0)
 {
-    <p class="empty-state">Nie ma jeszcze żadnych artykułów.</p>
+    <div class="empty-state">
+        <strong>Nie ma jeszcze żadnych artykułów</strong>
+        <span>Gdy redakcja coś opublikuje, zobaczysz to tutaj.</span>
+    </div>
 }
 else
 {
@@ -14,10 +17,12 @@ else
             var imageUrl = GetImageUrl(article.FileId);
             var hasImage = !string.IsNullOrEmpty(imageUrl);
             var initial = string.IsNullOrWhiteSpace(article.Title) ? "G" : article.Title.Trim()[0].ToString().ToUpperInvariant();
+            var authorInitial = string.IsNullOrWhiteSpace(article.Author) ? "?" : article.Author.Trim()[0].ToString().ToUpperInvariant();
+            var delay = $"--i:{Math.Min(i, 8)}";
 
             if (permissions == true)
             {
-                <div class="article-card">
+                <div class="article-card" style="@delay">
                     <div class="article-card__img-wrap @(hasImage ? "" : "article-card__img-wrap--empty")">
                         @if (hasImage)
                         {
@@ -29,13 +34,25 @@ else
                         }
                     </div>
                     <div class="article-card__body">
-                        <h5 class="article-card__title">@article.Title</h5>
+                        <h3 class="article-card__title">@article.Title</h3>
                         <p class="article-card__text">@article.Text</p>
                         <div class="article-card__footer">
-                            <span class="article-card__author">@article.Author</span>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
-                                Usuń artykuł
-                            </button>
+                            <span class="article-card__author">
+                                <span class="avatar" aria-hidden="true">@authorInitial</span>
+                                <span class="article-card__name">@article.Author</span>
+                            </span>
+                            <span class="article-card__actions">
+                                @if (confirmingId == article.Id)
+                                {
+                                    <button class="btn btn-sm btn-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">Potwierdź</button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => confirmingId = null">Anuluj</button>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@($"/article/{article.Id}")">Podgląd</a>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => confirmingId = article.Id">Usuń</button>
+                                }
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -44,7 +61,7 @@ else
             {
                 var featured = i == 0;
 
-                <NavLink class="@($"article-card article-card--link {(featured ? "article-card--featured" : "")}")" href="@($"/article/{article.Id}")">
+                <NavLink class="@($"article-card article-card--link {(featured ? "article-card--featured" : "")}")" href="@($"/article/{article.Id}")" style="@delay">
                     <div class="article-card__img-wrap @(hasImage ? "" : "article-card__img-wrap--empty")">
                         @if (hasImage)
                         {
@@ -54,12 +71,20 @@ else
                         {
                             <span aria-hidden="true">@initial</span>
                         }
+
+                        @if (featured)
+                        {
+                            <span class="article-card__badge">Najnowsze</span>
+                        }
                     </div>
                     <div class="article-card__body">
-                        <h5 class="article-card__title">@article.Title</h5>
+                        <h3 class="article-card__title">@article.Title</h3>
                         <p class="article-card__text">@article.Text</p>
                         <div class="article-card__footer">
-                            <span class="article-card__author">@article.Author</span>
+                            <span class="article-card__author">
+                                <span class="avatar" aria-hidden="true">@authorInitial</span>
+                                <span class="article-card__name">@article.Author</span>
+                            </span>
                             <span class="article-card__more">Czytaj więcej</span>
                         </div>
                     </div>
@@ -79,6 +104,7 @@ else
     [Inject]
     public required IFileService fileService { get; set; }
     Dictionary<int, string> imageUrls = new Dictionary<int, string>();
+    int? confirmingId;
     protected override async Task OnParametersSetAsync()
     {
         imageUrls.Clear();
@@ -99,6 +125,7 @@ else
     public async Task RemoveArticleByIdAsync(int id)
     {
         await articleService.RemoveArticleByIdAsync(id);
+        confirmingId = null;
         Article? article = Articles.FirstOrDefault(a => a.Id == id);
         if(article != null)
         {

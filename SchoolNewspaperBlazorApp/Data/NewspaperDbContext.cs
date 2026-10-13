@@ -11,10 +11,11 @@ namespace SchoolNewspaperBlazorApp.Data
         public DbSet<User> User { get; set; }
         protected override void OnModelCreating(ModelBuilder mb)
         {
+            base.OnModelCreating(mb);
+
             mb.Entity<MediaFile>()
                 .Property(x => x.Id)
-                //.ValueGeneratedNever();
-                .ValueGeneratedOnAdd();
+                .UseIdentityColumn();
         }
     }
 
