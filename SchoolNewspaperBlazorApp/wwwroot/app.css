@@ -1,6 +1,6 @@
 ﻿/* =========================================================
    TOKENY – jedno miejsce na kolory, cienie i promienie.
-   Tryb ciemny podmienia tylko wartości zmiennych.
+   Motyw jasny.
    ========================================================= */
 :root {
     --navy-950: #081a30;
@@ -45,38 +45,6 @@
     color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --paper: #0a1018;
-        --surface: #121b27;
-        --surface-sunken: #1a2533;
-        --ink: #f1f4f8;
-        --text: #d3d9e1;
-        --muted: #94a1b2;
-        --line: #243040;
-        --primary: #3b6aa6;
-        --primary-hover: #4b7bb9;
-        --link: #8fb6ee;
-        --accent: #8fb6ee;
-        --brand: #dbe8fb;
-        --field-bg: #0e1621;
-        --ring: rgba(143, 182, 238, .30);
-        --danger: #ff6b78;
-        --danger-bg: rgba(255, 107, 120, .12);
-        --success: #5fcf8c;
-        --success-bg: rgba(95, 207, 140, .12);
-        --gold-strong: #e5b657;
-        --gold-soft: rgba(217, 164, 65, .16);
-        --header-bg: rgba(12, 19, 29, .82);
-        --a11y-tab: #3b6aa6;
-        --bg-glow-1: rgba(59, 106, 166, .22);
-        --bg-glow-2: rgba(217, 164, 65, .07);
-        --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
-        --shadow-md: 0 10px 28px -10px rgba(0, 0, 0, .6);
-        --shadow-lg: 0 24px 50px -18px rgba(0, 0, 0, .75);
-        color-scheme: dark;
-    }
-}
 
 /* =========================================================
    BAZA
