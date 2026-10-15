@@ -6,33 +6,42 @@ namespace SchoolNewspaperBlazorApp.Repository
 {
     public class FileRepository : IFileRepository
     {
-        private readonly NewspaperDbContext _context;
-        public FileRepository(NewspaperDbContext context)
+        private readonly IDbContextFactory<NewspaperDbContext> _factory;
+
+        public FileRepository(IDbContextFactory<NewspaperDbContext> factory)
         {
-            _context = context;
+            _factory = factory;
         }
+
         public async Task<int> GetLastFileId()
         {
-            var id = await _context.Files
+            await using var context = await _factory.CreateDbContextAsync();
+            var id = await context.Files
                 .OrderByDescending(x => x.Id)
                 .Select(x => x.Id)
                 .FirstOrDefaultAsync();
             return id + 1;
         }
+
         public async Task<MediaFile> GetFileByIdAsync(int id)
         {
-            var fileId = await _context.Files.FirstOrDefaultAsync(a => a.Id == id);
-            if(fileId == null)
+            await using var context = await _factory.CreateDbContextAsync();
+            var file = await context.Files
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (file == null)
             {
                 throw new Exception("[FileRepository]Brak zdjecia w bazie danych");
             }
-            return fileId;
-        }
-        public async Task AddFileAsync(MediaFile file)
-        {
-            await _context.Files.AddAsync(file);
-            await _context.SaveChangesAsync();
+            return file;
         }
 
+        public async Task AddFileAsync(MediaFile file)
+        {
+            await using var context = await _factory.CreateDbContextAsync();
+            context.Files.Add(file);
+            await context.SaveChangesAsync();
+        }
     }
 }

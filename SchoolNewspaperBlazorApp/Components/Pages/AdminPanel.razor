@@ -1,11 +1,15 @@
 ﻿@page "/adminPanel"
 @rendermode InteractiveServer
+@attribute [Authorize]
 @inject IArticleService articleService
+@using Microsoft.AspNetCore.Authorization
 @using SchoolNewspaperBlazorApp.Components.Components
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 
-<div class="admin-page">
+@* @if (isLoggedIn) *@
+@* { *@
+    <div class="admin-page">
 
     <section class="admin-header">
         <div class="admin-header__content">
@@ -227,13 +231,37 @@
     }
 
 </div>
-
-
+@* } *@
+@* else *@
+@* { *@
+    <p>Wczytywanie sesji</p>
+@* } *@
 
 @code {
-
+    // private bool isLoggedIn = false;
     public int view = 0;
     public List<Article> articleList = new List<Article>();
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         string? login = await JS.InvokeAsync<string?>(
+    //             "sessionStorage.getItem",
+    //             "loggedUser"
+    //         );
+    //         if (!string.IsNullOrEmpty(login))
+    //         {
+    //             isLoggedIn = true;
+    //         }
+    //         else
+    //         {
+    //             nav.NavigateTo("/");
+    //             return;
+    //         }
+    //         StateHasChanged();
+    //     }
+    // }
 
     public void SetView(int view)
     {

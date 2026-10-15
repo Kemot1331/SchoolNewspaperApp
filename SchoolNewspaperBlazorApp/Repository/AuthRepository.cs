@@ -1,21 +1,39 @@
-﻿using SchoolNewspaperBlazorApp.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
 namespace SchoolNewspaperBlazorApp.Repository
 {
     public class AuthRepository : IAuthRepository
     {
-        private readonly NewspaperDbContext _context;
-        public AuthRepository(NewspaperDbContext context)
+        private readonly IDbContextFactory<NewspaperDbContext> _factory;
+
+        public AuthRepository(IDbContextFactory<NewspaperDbContext> factory)
         {
-            _context = context;
+            _factory = factory;
         }
 
         public async Task AddUserAsync(User user)
         {
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
+            await using var context = await _factory.CreateDbContextAsync();
+            await context.User.AddAsync(user);
+            await context.SaveChangesAsync();
+        }
+
+        // Zwraca hash hasła użytkownika znalezionego po loginie LUB e-mailu.
+        public async Task<string> CheckIfRegisteredAsync(string login, string password)
+        {
+            await using var context = await _factory.CreateDbContextAsync();
+            var user = await context.User
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Login == login || u.Email == login);
+
+            if (user == null)
+            {
+                throw new Exception("Konto nie istnieje");
+            }
+
+            return user.Password;
         }
     }
 }
-    
