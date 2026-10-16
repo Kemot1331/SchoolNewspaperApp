@@ -17,6 +17,9 @@
                         <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
                             Usuń artykuł
                         </button>
+                        <button class="btn btn-sm" @onclick="() => SendDataToEdit(article.Id)">
+                            Edytuj artykuł
+                        </button>
                     </div>
                 </div>
             </div>
@@ -41,6 +44,8 @@
 </div>
 
 @code {
+    [Parameter]
+    public EventCallback<int> onEdit { get; set; }
     [Parameter]
     public List<Article> Articles { get; set; } = new();
     [Parameter]
@@ -75,5 +80,10 @@
         {
         Articles.Remove(article);
         }
+    }
+
+    public async Task SendDataToEdit(int id)
+    {
+        await onEdit.InvokeAsync(id);
     }
 }

@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using SchoolNewspaperBlazorApp.Components;
@@ -9,6 +9,7 @@ using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
 using SchoolNewspaperBlazorApp.Repository;
 using SchoolNewspaperBlazorApp.Service;
+using System.Security.Claims;
 
 namespace SchoolNewspaperBlazorApp
 {
@@ -21,11 +22,12 @@ namespace SchoolNewspaperBlazorApp
                 .AddInteractiveServerComponents();
             //sql connect
             builder.Services.AddDbContextFactory<NewspaperDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("NewspaperConnectionString")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("NewspaperConnectionString")));
+
             //Repositry
             builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
-            builder.Services.AddScoped<IFileRepository, FileRepository>();
             builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+            builder.Services.AddScoped<IFileRepository, FileRepository>();
 
             //Services
             builder.Services.AddScoped<IArticleService, ArticleService>();
@@ -37,7 +39,7 @@ namespace SchoolNewspaperBlazorApp
                 .AddCookie(options =>
                 {
                     options.LoginPath = "/login";
-                    options.Cookie.Name = "Schoolnewspaper.Auth";
+                    options.Cookie.Name = "SchoolNewspaper.Auth";
                     options.Cookie.HttpOnly = true;
                     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                     options.Cookie.SameSite = SameSiteMode.Lax;
@@ -56,32 +58,39 @@ namespace SchoolNewspaperBlazorApp
                
                 app.UseHsts();
             }
-
-            app.MapPost("/auth/login", async (HttpContext context, IAuthService authService) =>
+            app.MapPost("/auth/login", async (
+                HttpContext context,
+                IAuthService authService) =>
             {
                 var form = await context.Request.ReadFormAsync();
                 string email = form["Email"].ToString();
                 string password = form["Password"].ToString();
-                bool succes = await authService.CheckIfRegisteredAsync(email, password);
-                if (!succes)
+                bool success = await authService.CheckIfRegisteredAsync(email, password);
+                if (!success)
                 {
-                    return Results.Unauthorized();
+                    return Results.Redirect("/");
                 }
-
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, email)
+                    new Claim(ClaimTypes.Name,email)
                 };
-                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var identity = new ClaimsIdentity(
+                    claims,
+                    CookieAuthenticationDefaults.AuthenticationScheme);
                 var principal = new ClaimsPrincipal(identity);
-                await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+                    principal);
                 return Results.Redirect("/adminPanel");
             });
+            var imagesPath = Path.Combine(
+                builder.Environment.ContentRootPath,
+                "Images"
+            );
+            Directory.CreateDirectory(imagesPath);
             app.UseStaticFiles();
             app.UseStaticFiles(new StaticFileOptions
             {
-                FileProvider = new PhysicalFileProvider
-                (@"C:\Users\Admin\Desktop\SchoolNewspaperBlazorApp"),
+                FileProvider = new PhysicalFileProvider(imagesPath),
                 RequestPath = "/Images"
             });
 
@@ -93,6 +102,9 @@ namespace SchoolNewspaperBlazorApp
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
 
+            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
+            Console.WriteLine(hasher.HashPassword(null!, "admin123"));
+            
             app.Run();
         }
     }

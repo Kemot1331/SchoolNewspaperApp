@@ -1,15 +1,12 @@
 ﻿@page "/adminPanel"
 @rendermode InteractiveServer
-@attribute [Authorize]
 @inject IArticleService articleService
+@attribute [Authorize]
 @using Microsoft.AspNetCore.Authorization
 @using SchoolNewspaperBlazorApp.Components.Components
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
-
-@* @if (isLoggedIn) *@
-@* { *@
-    <div class="admin-page">
+<div class="admin-page">
 
     <section class="admin-header">
         <div class="admin-header__content">
@@ -160,8 +157,8 @@
                     </div>
 
                     <button type="button"
-                            class="admin-small-button"
-                            @onclick="() => SetView(2)">
+                    class="admin-small-button"
+                    @onclick="() => SetView(2)">
                         + Dodaj artykuł
                     </button>
                 </div>
@@ -177,8 +174,8 @@
                         </p>
 
                         <button type="button"
-                                class="admin-small-button"
-                                @onclick="() => SetView(2)">
+                        class="admin-small-button"
+                        @onclick="() => SetView(2)">
                             Dodaj pierwszy artykuł
                         </button>
                     </div>
@@ -187,7 +184,7 @@
                 {
                     <div class="article-panel">
                         <ArticleCard Articles="articleList"
-                                     permissions="true" />
+                        permissions="true" onEdit="LoadArticleToEditAsync" />
                     </div>
                 }
             </section>
@@ -206,7 +203,7 @@
                 </div>
 
                 <div class="admin-form-wrapper">
-                    <ArticleForm />
+                    <ArticleForm IsEdit="false" />
                 </div>
             </section>
         }
@@ -228,41 +225,18 @@
                 </div>
             </section>
         }
+        else if (view == 4)
+        {
+            <ArticleForm IsEdit="true" Article="articleToEdit"/>
+        };
     }
 
-</div>
-@* } *@
-@* else *@
-@* { *@
-    <p>Wczytywanie sesji</p>
-@* } *@
+    </div>
 
 @code {
-    // private bool isLoggedIn = false;
     public int view = 0;
     public List<Article> articleList = new List<Article>();
-
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         string? login = await JS.InvokeAsync<string?>(
-    //             "sessionStorage.getItem",
-    //             "loggedUser"
-    //         );
-    //         if (!string.IsNullOrEmpty(login))
-    //         {
-    //             isLoggedIn = true;
-    //         }
-    //         else
-    //         {
-    //             nav.NavigateTo("/");
-    //             return;
-    //         }
-    //         StateHasChanged();
-    //     }
-    // }
-
+    public Article? articleToEdit;
     public void SetView(int view)
     {
         this.view = view;
@@ -271,5 +245,11 @@
     {
         articleList = await articleService.GetAllArticlesAsync();
         SetView(1);
+    }
+
+    public async Task LoadArticleToEditAsync(int id)
+    {
+        articleToEdit = await articleService.GetArticleByIdAsync(id);
+        SetView(4);
     }
 }

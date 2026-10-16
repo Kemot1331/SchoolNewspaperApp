@@ -45,5 +45,18 @@ namespace SchoolNewspaperBlazorApp.Service
                  await _articleRepository.RemoveArticleByIdAsync(id);
             }
         }
+
+        public async Task UpdateArticleByIdAsync(int id, string title, string text, string author, int fileId)
+        {
+            var article = new Article
+            {
+                Id = id,
+                Title = title,
+                Text = text,
+                Author = author,
+                FileId =  fileId
+            };
+            await _articleRepository.UpdateArticleByIdAsync(id,article);
+        }
     }
 }

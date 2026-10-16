@@ -53,5 +53,27 @@ namespace SchoolNewspaperBlazorApp.Repository
             context.Articles.Remove(article);
             await context.SaveChangesAsync();
         }
+
+        public async Task UpdateArticleByIdAsync(int id, Article newArticle)
+        {
+            await using var context = await _factory.CreateDbContextAsync();
+            var articleById = await context.Articles.FirstOrDefaultAsync(a => a.Id == id);
+
+            if (articleById == null)
+            {
+                throw new Exception($"Article with ID {id} not found.");
+            }
+
+            if (newArticle.FileId != 0)
+            {
+                articleById.FileId = newArticle.FileId;
+            }
+            
+            articleById.Title = newArticle.Title;
+            articleById.Author = newArticle.Author;
+            articleById.Text = newArticle.Text;
+                
+             await context.SaveChangesAsync();
+        }
     }
 }
