@@ -9,6 +9,8 @@ namespace SchoolNewspaperBlazorApp.Data
         public DbSet<Article> Articles { get; set; }
         public DbSet<MediaFile> Files { get; set; }
         public DbSet<User> User { get; set; }
+        public DbSet<UserPermission> UserPermissions { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
         protected override void OnModelCreating(ModelBuilder mb)
         {
             base.OnModelCreating(mb);
