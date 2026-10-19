@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
@@ -14,9 +15,26 @@ public class PermissionRepository : IPermissionRepository
         _factory = factory;
     }
 
-    public Task<bool> HasPermissionAsync(ClaimsPrincipal principal, EnumPermissions permission)
+    public async Task<bool> HasPermissionAsync(ClaimsPrincipal principal, EnumPermissions permission)
     {
+
         var id = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if()
+        if (string.IsNullOrEmpty(id))
+        {
+            return false;
+        }
+        if (id.IsNullOrEmpty())
+        {
+            return false;
+        }
+
+        if (!int.TryParse(id, out var permissionId))
+        {
+            return false;
+        }
+        await using var context = await _factory.CreateDbContextAsync();
+
+        return await context.UserPermissions
+            .AnyAsync(up => up.UserId == permissionId && up.Permission.PermissionsName == permission);
     }
 }
