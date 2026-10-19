@@ -1,6 +1,4 @@
-﻿using System.Security;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
@@ -11,15 +9,28 @@ public class PermissionService : IPermissionService
 {
     private readonly IPermissionRepository _permissionRepository;
     private readonly AuthenticationStateProvider _authenticationStateProvider;
-    public PermissionService(IPermissionRepository permissionRepository)
+
+    public PermissionService(
+        IPermissionRepository permissionRepository,
+        AuthenticationStateProvider authenticationStateProvider)
     {
         _permissionRepository = permissionRepository;
+        _authenticationStateProvider = authenticationStateProvider;
     }
 
     public async Task<bool> HasPermissionAsync(EnumPermissions permission)
     {
-        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var authState = await _authenticationStateProvider
+            .GetAuthenticationStateAsync();
+
         var principal = authState.User;
-        return await _permissionRepository.HasPermissionAsync(principal, permission);
+
+        if (principal.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        return await _permissionRepository
+            .HasPermissionAsync(principal, permission);
     }
 }
