@@ -50,7 +50,7 @@ namespace SchoolNewspaperBlazorApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Articles");
+                    b.ToTable("Articles", (string)null);
                 });
 
             modelBuilder.Entity("SchoolNewspaperBlazorApp.Data.MediaFile", b =>
@@ -68,7 +68,7 @@ namespace SchoolNewspaperBlazorApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Files");
+                    b.ToTable("Files", (string)null);
                 });
 
             modelBuilder.Entity("SchoolNewspaperBlazorApp.Data.User", b =>
@@ -100,7 +100,7 @@ namespace SchoolNewspaperBlazorApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 #pragma warning restore 612, 618
         }

@@ -16,6 +16,16 @@ namespace SchoolNewspaperBlazorApp.Data
             mb.Entity<MediaFile>()
                 .Property(x => x.Id)
                 .UseIdentityColumn();
+            mb.Entity<UserPermission>()
+                .HasKey(x => new { x.UserId, x.PermissionId });
+            mb.Entity<UserPermission>()
+                .HasOne(x => x.User)
+                .WithMany(x => x.UserPermissions)
+                .HasForeignKey(x => x.UserId);
+            mb.Entity<UserPermission>()
+                .HasOne(x => x.Permission)
+                .WithMany(x => x.Permissions)
+                .HasForeignKey(x => x.PermissionId);
         }
     }
 
