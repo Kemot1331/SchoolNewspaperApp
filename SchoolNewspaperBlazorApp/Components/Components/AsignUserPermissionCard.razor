@@ -1,22 +1,25 @@
-﻿@using SchoolNewspaperBlazorApp.Interfaces.Repository
+﻿@using Microsoft.AspNetCore.Components.Authorization
 @using SchoolNewspaperBlazorApp.Interfaces.Service
-@inject IAuthService _authService
-
-<div class="article-card">
-    <div class="article-card__body">
-        <h5 class="article-card__title">@article.Title</h5>
-        <p class="article-card__text">@article.Text</p>
-        <div class="article-card__footer">
-            <span class="article-card__author">@article.Author</span>
-            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
-                Usuń artykuł
-            </button>
-            <button class="btn btn-sm" @onclick="() => SendDataToEdit(article.Id)">
-                Edytuj artykuł
-            </button>
-        </div>
+@inject IAuthService _authService;
+@inject AuthenticationStateProvider _asp;
+@foreach(var user in Users)
+{
+    <div class="article-card">
+        <div class="article-card__body">
+            <h5 class="article-card__title">@user</h5>
+                
+        </div>  
     </div>
-</div>
+}
+
 @code {
-    
+    public Dictionary<int,string> Users { get; set; } = new Dictionary<int, string>();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+        {
+            Users = await _authService.GetAllUsersAsync();
+            StateHasChanged();
+        }
+    }
 }

@@ -17,7 +17,7 @@ namespace SchoolNewspaperBlazorApp.Service
             _permissionRepository = permissionRepository;
         }
         
-        public async Task<List<String>> GetAllUsersAsync()
+        public async Task<Dictionary<int, string>> GetAllUsersAsync()
         {
             return await _authRepository.GetAllUsersAsync();
         }
