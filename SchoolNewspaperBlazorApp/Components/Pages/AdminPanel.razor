@@ -102,6 +102,26 @@
                     Dodaj konto <span>→</span>
                 </span>
             </button>
+            
+            
+            <button type="button"
+                    class="admin-action"
+                    @onclick="() => SetView(5)">
+
+                <span class="admin-action__icon">✎</span>
+
+                <span class="admin-action__number">04</span>
+
+                <strong>Nadaj uprawnienia</strong>
+
+                <span class="admin-action__description">
+                    Edytuj uprawnienia użytkowników
+                </span>
+
+                <span class="admin-action__footer">
+                    Nadaj uprawnienia <span>→</span>
+                </span>
+            </button>
 
         </div>
 
@@ -228,7 +248,11 @@
         else if (view == 4)
         {
             <ArticleForm IsEdit="true" Article="articleToEdit"/>
-        };
+        }
+        else if (view == 5)
+        {
+            <AsignUserPermissionCard></AsignUserPermissionCard>
+        }
     }
 
     </div>

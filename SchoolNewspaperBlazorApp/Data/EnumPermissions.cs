@@ -6,5 +6,6 @@ public enum EnumPermissions
     EditArticle,
     DeleteArticle,
     AddUser,
-    ManageUser
+    ManageUser,
+    Master
 }

@@ -1,5 +1,22 @@
-﻿<h3>AsignUserPermissionCard</h3>
+﻿@using SchoolNewspaperBlazorApp.Interfaces.Repository
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@inject IAuthService _authService
 
+<div class="article-card">
+    <div class="article-card__body">
+        <h5 class="article-card__title">@article.Title</h5>
+        <p class="article-card__text">@article.Text</p>
+        <div class="article-card__footer">
+            <span class="article-card__author">@article.Author</span>
+            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
+                Usuń artykuł
+            </button>
+            <button class="btn btn-sm" @onclick="() => SendDataToEdit(article.Id)">
+                Edytuj artykuł
+            </button>
+        </div>
+    </div>
+</div>
 @code {
     
 }
