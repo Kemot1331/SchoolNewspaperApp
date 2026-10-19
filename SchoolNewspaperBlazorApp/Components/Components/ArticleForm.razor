@@ -12,7 +12,7 @@
             <img src="@previewImage" alt="zdjęcie" class="image-preview" />
         </div>
     }
-
+    <h1>@ErrorMessage</h1>
     <label class="form-label">Zdjęcie</label>
     <InputFile OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
 
@@ -26,7 +26,7 @@
         <label class="form-label">Autor</label>
         <input @bind="author" class="form-control mb-4" placeholder="Imię i nazwisko" />
 
-        <button type="submit" class="btn btn-primary w-100">Dodaj</button>
+        <button type="submit" class="btn btn-primary w-100">@{IsEdit ? "Zatwierdź edycje" : "Dodaj artykuł"}</button>
     </form>
 </div>
 
@@ -40,6 +40,7 @@
     private string text = "";
     private string author = "";
     private string? previewImage;
+    private string? ErrorMessage;
     IBrowserFile? file;
     protected override void OnParametersSet()
     {
@@ -53,6 +54,11 @@
 
     private async Task SubmitForm()
     {
+        if (!IsEdit && file == null)
+        {
+            ErrorMessage = "Dodając artykul musisz dodac zdjęcie";
+            return;
+        }
         int id = 0;
         if(file != null)
         {
