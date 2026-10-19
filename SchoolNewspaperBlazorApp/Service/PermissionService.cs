@@ -33,4 +33,21 @@ public class PermissionService : IPermissionService
         return await _permissionRepository
             .HasPermissionAsync(principal, permission);
     }
+
+    public Task<List<EnumPermissions>> GetUserPermissionsAsync(int userId)
+    {
+        return _permissionRepository.GetUserPermissionsAsync(userId);
+    }
+
+    public async Task SetUserPermissionsAsync(int userId, IEnumerable<EnumPermissions> permissions)
+    {
+        var allowed = await HasPermissionAsync(EnumPermissions.ManageUser)
+                      || await HasPermissionAsync(EnumPermissions.Master);
+        if (!allowed)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _permissionRepository.SetUserPermissionsAsync(userId, permissions);
+    }
 }

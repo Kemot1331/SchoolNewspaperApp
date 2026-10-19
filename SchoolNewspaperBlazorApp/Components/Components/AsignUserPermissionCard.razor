@@ -1,61 +1,155 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
-@using SchoolNewspaperBlazorApp.Data
+﻿@using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
-@inject IAuthService _authService;
-@inject AuthenticationStateProvider _asp;
-@foreach(var user in Users)
+@inject IAuthService authService
+@inject IPermissionService permissionService
+
+@if (!string.IsNullOrEmpty(message))
 {
-    <div class="article-card">
-        <div class="article-card__body">
-            <h5 class="article-card__title">Uprawnienia użytkownika: @user.Value</h5>
-            @foreach (var permission in Enum.GetValues<EnumPermissions>()
-                          .Where(p => p != EnumPermissions.Master))
-            {
-                <div class="form-check mb-2" @key="permission">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           id="@($"permission-{user.Key}-{permission}")"/>
-                    <label class="form-check-label"
-                           for="@($"permission-{user.Key}-{permission}")">
-                        @GetPermissionName(permission);
-                    </label>
+    <p class="form-status" role="status">@message</p>
+}
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <p class="form-error" role="alert">@error</p>
+}
+
+@if (Users.Count == 0)
+{
+    <p class="empty-state">Nie ma jeszcze żadnych użytkowników.</p>
+}
+else
+{
+    <div class="article-grid">
+        @foreach (var user in Users)
+        {
+            var isOpen = expandedUserId == user.Key;
+
+            <div class="article-card" @key="user.Key">
+                <div class="article-card__body">
+                    <h5 class="article-card__title">@user.Value</h5>
+
+                    @if (isOpen)
+                    {
+                        <div class="mb-3">
+                            @foreach (var permission in Editable)
+                            {
+                                <div class="form-check mb-2" @key="permission">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="@($"permission-{user.Key}-{permission}")"
+                                           checked="@selected.Contains(permission)"
+                                           @onchange="e => SetPermission(permission, e)" />
+                                    <label class="form-check-label"
+                                           for="@($"permission-{user.Key}-{permission}")">
+                                        @PermissionLabel(permission)
+                                    </label>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary" disabled="@saving" @onclick="SaveAsync">
+                                Zapisz
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUserAsync(user.Key)">
+                                Anuluj
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUserAsync(user.Key)">
+                            Edytuj uprawnienia
+                        </button>
+                    }
                 </div>
-            }
-        </div>  
+            </div>
+        }
     </div>
 }
 
 @code {
-    public Dictionary<int,string> Users { get; set; } = new Dictionary<int, string>();
-    private int? ExpendedUserId { get; set; }
-    private Dictionary<EnumPermissions, bool> SelectedPermissions { get; set; } = new();
+    private static readonly EnumPermissions[] Editable =
+        Enum.GetValues<EnumPermissions>().Where(p => p != EnumPermissions.Master).ToArray();
+
+    private Dictionary<int, string> Users = new();
+    private int? expandedUserId;
+    private HashSet<EnumPermissions> selected = new();
+    private bool saving;
+    private string? message;
+    private string? error;
 
     protected override async Task OnInitializedAsync()
     {
-        Users =  await _authService.GetAllUsersAsync();
-    }
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if(firstRender)
-        {
-            Users = await _authService.GetAllUsersAsync();
-            StateHasChanged();
-        }
+        Users = await authService.GetAllUsersAsync();
     }
 
-    private void TogglePermission(int userId)
+    private async Task ToggleUserAsync(int userId)
     {
-        if (ExpendedUserId == userId)
+        message = null;
+        error = null;
+
+        if (expandedUserId == userId)
         {
-            ExpendedUserId = null;
+            expandedUserId = null;
             return;
         }
+
+        var current = await permissionService.GetUserPermissionsAsync(userId);
+        selected = current.ToHashSet();
+        expandedUserId = userId;
     }
 
-    private String GetPermissionName(EnumPermissions permission)
+    private void SetPermission(EnumPermissions permission, ChangeEventArgs e)
     {
-        return Enum.GetName(typeof(EnumPermissions), permission);
+        if (e.Value is true)
+        {
+            selected.Add(permission);
+        }
+        else
+        {
+            selected.Remove(permission);
+        }
     }
-    
-    
+
+    private async Task SaveAsync()
+    {
+        if (expandedUserId is not int userId)
+        {
+            return;
+        }
+
+        saving = true;
+        message = null;
+        error = null;
+
+        try
+        {
+            await permissionService.SetUserPermissionsAsync(userId, selected);
+            message = $"Zapisano uprawnienia użytkownika {Users[userId]}.";
+            expandedUserId = null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            error = "Nie masz uprawnień do zmiany uprawnień użytkowników.";
+        }
+        catch (Exception)
+        {
+            error = "Nie udało się zapisać uprawnień.";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private static string PermissionLabel(EnumPermissions permission) => permission switch
+    {
+        EnumPermissions.AddArticle => "Dodawanie artykułów",
+        EnumPermissions.EditArticle => "Edycja artykułów",
+        EnumPermissions.DeleteArticle => "Usuwanie artykułów",
+        EnumPermissions.AddUser => "Dodawanie użytkowników",
+        EnumPermissions.ManageUser => "Zarządzanie użytkownikami",
+        _ => permission.ToString()
+    };
 }
