@@ -17,5 +17,6 @@ public class PermissionRepository : IPermissionRepository
     public Task<bool> HasPermissionAsync(ClaimsPrincipal principal, EnumPermissions permission)
     {
         var id = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if()
     }
 }
