@@ -30,26 +30,26 @@ namespace SchoolNewspaperBlazorApp.Service
 
             await _authRepository.AddUserAsync(user);
         }
-        public async Task<bool> CheckIfRegisteredAsync(
+        public async Task<int> CheckIfRegisteredAsync(
             string login, string password)
         {
             var hasher = new PasswordHasher<string>();
             // Uwaga: hasła powinny być przechowywane w postaci skrótu (hash) — to tylko przykład działania.
             try
             {
-                var dbPass = await _authRepository.CheckIfRegisteredAsync(login, password);
-                var result = hasher.VerifyHashedPassword(login, dbPass, password);
+                var user = await _authRepository.CheckIfRegisteredAsync(login, password);
+                var result = hasher.VerifyHashedPassword(login, user.Password, password);
                 if (result == PasswordVerificationResult.Success)
                 {
-                    return true;
+                    return user.Id;
                 }
                 else {
-                    return false;
+                    return 0;
                 }
             }
             catch (Exception) 
             {
-                return false;
+                return 0;
             }
         }
     }

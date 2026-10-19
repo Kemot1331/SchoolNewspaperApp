@@ -1,6 +1,9 @@
-﻿namespace SchoolNewspaperBlazorApp.Interfaces.Repository;
+﻿using System.Security.Claims;
+using SchoolNewspaperBlazorApp.Data;
 
-public class IPermissionRepository
+namespace SchoolNewspaperBlazorApp.Interfaces.Repository;
+
+public interface IPermissionRepository
 {
-    
+    Task<bool> HasPermissionAsync(ClaimsPrincipal principal, EnumPermissions permission);
 }

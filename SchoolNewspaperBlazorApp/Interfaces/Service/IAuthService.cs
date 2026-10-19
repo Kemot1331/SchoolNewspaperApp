@@ -3,6 +3,6 @@
     public interface IAuthService
     {
         Task AddUserAsync(string login, string password, string email);
-        Task<bool> CheckIfRegisteredAsync(string login, string password);
+        Task<int> CheckIfRegisteredAsync(string login, string password);
     }
 }

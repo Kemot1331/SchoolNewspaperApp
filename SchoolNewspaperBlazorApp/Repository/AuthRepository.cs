@@ -21,7 +21,7 @@ namespace SchoolNewspaperBlazorApp.Repository
         }
 
         // Zwraca hash hasła użytkownika znalezionego po loginie LUB e-mailu.
-        public async Task<string> CheckIfRegisteredAsync(string login, string password)
+        public async Task<User> CheckIfRegisteredAsync(string login, string password)
         {
             await using var context = await _factory.CreateDbContextAsync();
             var user = await context.User
@@ -33,7 +33,7 @@ namespace SchoolNewspaperBlazorApp.Repository
                 throw new Exception("Konto nie istnieje");
             }
 
-            return user.Password;
+            return user;
         }
     }
 }

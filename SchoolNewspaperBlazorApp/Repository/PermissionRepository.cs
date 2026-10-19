@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
@@ -11,5 +12,10 @@ public class PermissionRepository : IPermissionRepository
     public PermissionRepository(IDbContextFactory<NewspaperDbContext> factory)
     {
         _factory = factory;
+    }
+
+    public Task<bool> HasPermissionAsync(ClaimsPrincipal principal, EnumPermissions permission)
+    {
+        throw new NotImplementedException();
     }
 }
