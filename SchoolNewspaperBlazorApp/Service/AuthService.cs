@@ -9,10 +9,12 @@ namespace SchoolNewspaperBlazorApp.Service
     public class AuthService : IAuthService
     {
         private readonly IAuthRepository _authRepository;
+        private readonly IPermissionRepository _permissionRepository;
 
-        public AuthService(IAuthRepository authRepository)
+        public AuthService(IAuthRepository authRepository,  IPermissionRepository permissionRepository)
         {
             _authRepository = authRepository;
+            _permissionRepository = permissionRepository;
         }
 
 

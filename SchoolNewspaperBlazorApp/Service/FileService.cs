@@ -10,12 +10,15 @@ namespace SchoolNewspaperBlazorApp.Service
     {
         private readonly IFileRepository _fileRepository;
         private readonly string uploadPath;
+        private readonly IPermissionService _permissionService;
 
         public FileService(
             IFileRepository fileRepository,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            IPermissionService permissionService)
         {
             _fileRepository = fileRepository;
+            _permissionService = permissionService;
 
             uploadPath = Path.Combine(
                 environment.ContentRootPath,
@@ -37,6 +40,8 @@ namespace SchoolNewspaperBlazorApp.Service
 
         public async Task<int> UploadImage(IBrowserFile file)
         {
+            bool hasPermission =  await _permissionService.HasPermissionAsync(EnumPermissions.AddArticle);
+            if(!hasPermission) return 0;
             Directory.CreateDirectory(uploadPath);
 
             string extension = Path.GetExtension(file.Name);

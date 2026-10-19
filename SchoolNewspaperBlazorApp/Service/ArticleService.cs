@@ -9,12 +9,16 @@ namespace SchoolNewspaperBlazorApp.Service
     public class ArticleService : IArticleService
     {
         private readonly IArticleRepository _articleRepository;
-        public ArticleService(IArticleRepository articleRepository)
+        private readonly IPermissionService _permissionService;
+        public ArticleService(IArticleRepository articleRepository, IPermissionService permissionService)
         {
             _articleRepository = articleRepository;
+            _permissionService = permissionService;
         }
         public async Task AddArticleAsync(string title, string text, string author,int fileId)
         {
+            bool hasPermission =  await _permissionService.HasPermissionAsync(EnumPermissions.AddArticle);
+            if(!hasPermission) return;
             var article = new Article
             {
                 Title = title,
