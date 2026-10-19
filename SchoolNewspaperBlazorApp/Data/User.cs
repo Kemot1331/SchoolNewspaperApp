@@ -13,5 +13,6 @@ namespace SchoolNewspaperBlazorApp.Data
         // W bazie kolumna nazywa się AddedBy
         [Column("AddedBy")]
         public string AddBy { get; set; } = string.Empty;
+        public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
     }
 }
