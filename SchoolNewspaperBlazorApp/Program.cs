@@ -67,14 +67,15 @@ namespace SchoolNewspaperBlazorApp
                 var form = await context.Request.ReadFormAsync();
                 string email = form["Email"].ToString();
                 string password = form["Password"].ToString();
-                bool success = await authService.CheckIfRegisteredAsync(email, password);
-                if (!success)
+                int userId =  await authService.CheckIfRegisteredAsync(email, password);
+                if (userId == 0)
                 {
                     return Results.Redirect("/");
                 }
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name,email)
+                    new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                    new Claim(ClaimTypes.Name,email),
                 };
                 var identity = new ClaimsIdentity(
                     claims,

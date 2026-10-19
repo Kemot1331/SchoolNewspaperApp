@@ -16,6 +16,6 @@ public class PermissionRepository : IPermissionRepository
 
     public Task<bool> HasPermissionAsync(ClaimsPrincipal principal, EnumPermissions permission)
     {
-        throw new NotImplementedException();
+        var id = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
 }
