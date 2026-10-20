@@ -41,7 +41,7 @@ namespace SchoolNewspaperBlazorApp.Repository
         }
 
         public async Task RemoveArticleByIdAsync(int id)
-        {
+        {   
             await using var context = await _factory.CreateDbContextAsync();
             var article = await context.Articles.FirstOrDefaultAsync(a => a.Id == id);
 

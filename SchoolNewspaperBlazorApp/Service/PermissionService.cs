@@ -39,15 +39,9 @@ public class PermissionService : IPermissionService
         return _permissionRepository.GetUserPermissionsAsync(userId);
     }
 
-    public async Task SetUserPermissionsAsync(int userId, IEnumerable<EnumPermissions> permissions)
+    public Task SetUserPermissionsAsync(int userId, IEnumerable<EnumPermissions> permissions)
     {
-        var allowed = await HasPermissionAsync(EnumPermissions.ManageUser)
-                      || await HasPermissionAsync(EnumPermissions.Master);
-        if (!allowed)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        await _permissionRepository.SetUserPermissionsAsync(userId, permissions);
+        // TODO: dodać sprawdzanie ManageUser / Master, gdy uprawnienia będą już nadawane
+        return _permissionRepository.SetUserPermissionsAsync(userId, permissions);
     }
 }
