@@ -1,0 +1,37 @@
+﻿@using SchoolNewspaperBlazorApp.Service
+@inject ToastService toasts
+@implements IDisposable
+
+<div style="position: fixed; right: 1rem; bottom: 1rem; z-index: 2000; display: flex; flex-direction: column; gap: .6rem; width: min(22rem, calc(100vw - 2rem)); pointer-events: none;">
+    @foreach (var t in toasts.Toasts)
+    {
+        <div @key="t.Id"
+             role="@(t.Type == "error" ? "alert" : "status")"
+             style="@ToastStyle(t.Type)">
+            <span style="flex: 1;">@t.Message</span>
+            <button type="button"
+                    aria-label="Zamknij"
+                    style="background: none; border: 0; padding: 0; color: #6b778a; font-size: 1.25rem; line-height: 1; cursor: pointer;"
+                    @onclick="() => toasts.Remove(t.Id)">×</button>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized() => toasts.OnChange += Refresh;
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => toasts.OnChange -= Refresh;
+
+    private static string ToastStyle(string type)
+    {
+        var accent = type == "error" ? "#a52c38" : "#1ca779";
+
+        return "display: flex; align-items: flex-start; gap: .75rem; padding: .8rem 1rem;"
+               + " font-size: 14px; font-weight: 600; line-height: 1.5; color: #1d2a3d;"
+               + " background: #ffffff; border: 1px solid #dde3ec;"
+               + $" border-left: 4px solid {accent}; border-radius: 12px;"
+               + " box-shadow: 0 10px 30px rgba(24, 58, 104, .18); pointer-events: auto;";
+    }
+}

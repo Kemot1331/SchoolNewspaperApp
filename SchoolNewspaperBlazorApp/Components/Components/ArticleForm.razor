@@ -1,7 +1,9 @@
 ﻿@using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
 @inject IArticleService articleService
 @inject IFileService fileService
+@inject ToastService toastService
 
 <div class="add-article-form">
     <h1 class="add-article-form__title">Dodaj artykuł</h1>
@@ -12,9 +14,9 @@
             <img src="@previewImage" alt="zdjęcie" class="image-preview" />
         </div>
     }
-    <h1>@ErrorMessage</h1>
+
     <label class="form-label">Zdjęcie</label>
-    <InputFile OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
+    <InputFile @key="formKey" OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
 
     <form @onsubmit="SubmitForm" @onsubmit:preventDefault>
         <label class="form-label">Tytuł</label>
@@ -40,8 +42,9 @@
     private string text = "";
     private string author = "";
     private string? previewImage;
-    private string? ErrorMessage;
+    private int formKey;
     IBrowserFile? file;
+
     protected override void OnParametersSet()
     {
         if (IsEdit && Article != null)
@@ -56,27 +59,53 @@
     {
         if (!IsEdit && file == null)
         {
-            ErrorMessage = "Dodając artykul musisz dodac zdjęcie";
+            toastService.Error("Dodając artykuł, musisz dodać zdjęcie.");
             return;
         }
-        int id = 0;
-        if(file != null)
+
+        try
         {
-            id = await fileService.UploadImage(file);
+            // przy edycji bez nowego zdjęcia zostaje dotychczasowe (wcześniej wpadało tu 0)
+            int id = IsEdit && Article != null ? Article.FileId : 0;
+            if (file != null)
+            {
+                id = await fileService.UploadImage(file);
+            }
+
+            if (IsEdit && Article != null)
+            {
+                await articleService.UpdateArticleByIdAsync(Article.Id, title, text, author, id);
+                toastService.Success("Artykuł został zapisany.");
+                ClearPhoto();
+            }
+            else
+            {
+                await articleService.AddArticleAsync(title, text, author, id);
+                toastService.Success("Artykuł został dodany.");
+
+                // czyścimy formularz, żeby nie dodać tego samego artykułu dwa razy
+                title = "";
+                text = "";
+                author = "";
+                ClearPhoto();
+            }
         }
-        if (IsEdit && Article != null)
+        catch (Exception)
         {
-            await articleService.UpdateArticleByIdAsync(Article.Id, title, text, author, id);
-        }
-        else
-        {
-            await articleService.AddArticleAsync(title, text, author,id);
+            toastService.Error("Nie udało się zapisać artykułu.");
         }
     }
+
     private async Task ChoosePhoto(InputFileChangeEventArgs e)
     {
         file = e.File;
         previewImage = await fileService.GetPreviewAsync(file);
     }
-}
 
+    private void ClearPhoto()
+    {
+        file = null;
+        previewImage = null;
+        formKey++;
+    }
+}

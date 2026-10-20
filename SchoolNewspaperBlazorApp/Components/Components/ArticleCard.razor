@@ -1,5 +1,7 @@
 ﻿@using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
+@inject ToastService toastService
 <div class="article-grid">
     @foreach (var article in Articles)
     {
@@ -14,12 +16,18 @@
                     <p class="article-card__text">@article.Text</p>
                     <div class="article-card__footer">
                         <span class="article-card__author">@article.Author</span>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
-                            Usuń artykuł
-                        </button>
-                        <button class="btn btn-sm" @onclick="() => SendDataToEdit(article.Id)">
-                            Edytuj artykuł
-                        </button>
+                        @if (CanDelete)
+                        {
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
+                                Usuń artykuł
+                            </button>
+                        }
+                        @if (CanEdit)
+                        {
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => SendDataToEdit(article.Id)">
+                                Edytuj artykuł
+                            </button>
+                        }
                     </div>
                 </div>
             </div>
@@ -50,6 +58,10 @@
     public List<Article> Articles { get; set; } = new();
     [Parameter]
     public bool permissions { get; set; }
+    [Parameter]
+    public bool CanEdit { get; set; }
+    [Parameter]
+    public bool CanDelete { get; set; }
     [Inject]
     public required IArticleService articleService { get; set; }
     [Inject]
@@ -74,11 +86,19 @@
 
     public async Task RemoveArticleByIdAsync(int id)
     {
-        await articleService.RemoveArticleByIdAsync(id);
-        Article? article = Articles.FirstOrDefault(a => a.Id == id);
-        if(article != null)
+        try
         {
-        Articles.Remove(article);
+            await articleService.RemoveArticleByIdAsync(id);
+            Article? article = Articles.FirstOrDefault(a => a.Id == id);
+            if(article != null)
+            {
+                Articles.Remove(article);
+            }
+            toastService.Success("Artykuł został usunięty.");
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się usunąć artykułu.");
         }
     }
 

@@ -1,5 +1,6 @@
 ﻿@page "/adminPanel"
 @rendermode InteractiveServer
+@inject IPermissionService permissionService
 @inject IArticleService articleService
 @attribute [Authorize]
 @using Microsoft.AspNetCore.Authorization
@@ -7,7 +8,7 @@
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 <div class="admin-page">
-
+    <ToastHost />
     <section class="admin-header">
         <div class="admin-header__content">
             <span class="admin-header__eyebrow">
@@ -45,83 +46,93 @@
         </div>
 
         <div class="admin-actions">
+            @if (canEditArticle || canDeleteArticle)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="LoadArticleAsync">
 
-            <button type="button"
-                    class="admin-action"
-                    @onclick="LoadArticleAsync">
+                    <span class="admin-action__icon">▤</span>
 
-                <span class="admin-action__icon">▤</span>
+                    <span class="admin-action__number">01</span>
 
-                <span class="admin-action__number">01</span>
+                    <strong>Panel artykułów</strong>
 
-                <strong>Panel artykułów</strong>
+                    <span class="admin-action__description">
+                        Przeglądaj publikacje i zarządzaj istniejącymi artykułami.
+                    </span>
 
-                <span class="admin-action__description">
-                    Przeglądaj publikacje i zarządzaj istniejącymi artykułami.
-                </span>
+                    <span class="admin-action__footer">
+                        Otwórz artykuły <span>→</span>
+                    </span>
+                </button>
+            }
 
-                <span class="admin-action__footer">
-                    Otwórz artykuły <span>→</span>
-                </span>
-            </button>
+            @if (canAddArticle)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(2)">
 
-            <button type="button"
-                    class="admin-action"
-                    @onclick="() => SetView(2)">
+                    <span class="admin-action__icon">✎</span>
 
-                <span class="admin-action__icon">✎</span>
+                    <span class="admin-action__number">02</span>
 
-                <span class="admin-action__number">02</span>
+                    <strong>Dodaj artykuł</strong>
 
-                <strong>Dodaj artykuł</strong>
+                    <span class="admin-action__description">
+                        Przygotuj nową publikację i dodaj ją do gazetki szkolnej.
+                    </span>
 
-                <span class="admin-action__description">
-                    Przygotuj nową publikację i dodaj ją do gazetki szkolnej.
-                </span>
+                    <span class="admin-action__footer">
+                        Utwórz artykuł <span>→</span>
+                    </span>
+                </button>
+            }
 
-                <span class="admin-action__footer">
-                    Utwórz artykuł <span>→</span>
-                </span>
-            </button>
+            @if (canAddUser)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(3)">
 
-            <button type="button"
-                    class="admin-action"
-                    @onclick="() => SetView(3)">
+                    <span class="admin-action__icon">♙</span>
 
-                <span class="admin-action__icon">♙</span>
+                    <span class="admin-action__number">03</span>
 
-                <span class="admin-action__number">03</span>
+                    <strong>Dodaj użytkownika</strong>
 
-                <strong>Dodaj użytkownika</strong>
+                    <span class="admin-action__description">
+                        Dodaj konto użytkownika do systemu gazetki.
+                    </span>
 
-                <span class="admin-action__description">
-                    Dodaj konto użytkownika do systemu gazetki.
-                </span>
+                    <span class="admin-action__footer">
+                        Dodaj konto <span>→</span>
+                    </span>
+                </button>
+            }
 
-                <span class="admin-action__footer">
-                    Dodaj konto <span>→</span>
-                </span>
-            </button>
-            
-            
-            <button type="button"
-                    class="admin-action"
-                    @onclick="() => SetView(5)">
+            @if (canManageUsers)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(5)">
 
-                <span class="admin-action__icon">✎</span>
+                    <span class="admin-action__icon">✎</span>
 
-                <span class="admin-action__number">04</span>
+                    <span class="admin-action__number">04</span>
 
-                <strong>Nadaj uprawnienia</strong>
+                    <strong>Nadaj uprawnienia</strong>
 
-                <span class="admin-action__description">
-                    Edytuj uprawnienia użytkowników
-                </span>
+                    <span class="admin-action__description">
+                        Edytuj uprawnienia użytkowników
+                    </span>
 
-                <span class="admin-action__footer">
-                    Nadaj uprawnienia <span>→</span>
-                </span>
-            </button>
+                    <span class="admin-action__footer">
+                        Nadaj uprawnienia <span>→</span>
+                    </span>
+                </button>
+            }
 
         </div>
 
@@ -176,11 +187,14 @@
                         <p>Zarządzaj artykułami opublikowanymi w gazetce.</p>
                     </div>
 
-                    <button type="button"
-                    class="admin-small-button"
-                    @onclick="() => SetView(2)">
-                        + Dodaj artykuł
-                    </button>
+                    @if (canAddArticle)
+                    {
+                        <button type="button"
+                                class="admin-small-button"
+                                @onclick="() => SetView(2)">
+                            + Dodaj artykuł
+                        </button>
+                    }
                 </div>
 
                 @if (articleList.Count == 0)
@@ -189,22 +203,27 @@
                         <span class="admin-empty-state__icon">▤</span>
                         <h3>Brak artykułów</h3>
                         <p>
-                            Nie znaleziono publikacji. Możesz dodać pierwszy
-                            artykuł do gazetki.
+                            Nie znaleziono publikacji.
                         </p>
 
-                        <button type="button"
-                        class="admin-small-button"
-                        @onclick="() => SetView(2)">
-                            Dodaj pierwszy artykuł
-                        </button>
+                        @if (canAddArticle)
+                        {
+                            <button type="button"
+                                    class="admin-small-button"
+                                    @onclick="() => SetView(2)">
+                                Dodaj pierwszy artykuł
+                            </button>
+                        }
                     </div>
                 }
                 else
                 {
                     <div class="article-panel">
                         <ArticleCard Articles="articleList"
-                        permissions="true" onEdit="LoadArticleToEditAsync" />
+                                     permissions="true"
+                                     CanEdit="canEditArticle"
+                                     CanDelete="canDeleteArticle"
+                                     onEdit="LoadArticleToEditAsync" />
                     </div>
                 }
             </section>
@@ -255,24 +274,73 @@
         }
     }
 
-    </div>
+</div>
 
 @code {
     public int view = 0;
     public List<Article> articleList = new List<Article>();
     public Article? articleToEdit;
-    public void SetView(int view)
+
+    private bool canAddArticle;
+    private bool canEditArticle;
+    private bool canDeleteArticle;
+    private bool canAddUser;
+    private bool canManageUsers;
+
+    protected override async Task OnInitializedAsync()
     {
-        this.view = view;
+        canAddArticle = await HasAsync(EnumPermissions.AddArticle);
+        canEditArticle = await HasAsync(EnumPermissions.EditArticle);
+        canDeleteArticle = await HasAsync(EnumPermissions.DeleteArticle);
+        canAddUser = await HasAsync(EnumPermissions.AddUser);
+        canManageUsers = await HasAsync(EnumPermissions.ManageUser);
     }
+
+    private async Task<bool> HasAsync(EnumPermissions permission)
+    {
+        return await permissionService.HasPermissionAsync(permission)
+               || await permissionService.HasPermissionAsync(EnumPermissions.Master);
+    }
+
+    private bool CanOpen(int target) => target switch
+    {
+        0 => true,
+        1 => canEditArticle || canDeleteArticle,
+        2 => canAddArticle,
+        3 => canAddUser,
+        4 => canEditArticle,
+        5 => canManageUsers,
+        _ => false
+    };
+
+    public void SetView(int target)
+    {
+        if (!CanOpen(target))
+        {
+            return;
+        }
+
+        view = target;
+    }
+
     public async Task LoadArticleAsync()
     {
+        if (!CanOpen(1))
+        {
+            return;
+        }
+
         articleList = await articleService.GetAllArticlesAsync();
         SetView(1);
     }
 
     public async Task LoadArticleToEditAsync(int id)
     {
+        if (!CanOpen(4))
+        {
+            return;
+        }
+
         articleToEdit = await articleService.GetArticleByIdAsync(id);
         SetView(4);
     }

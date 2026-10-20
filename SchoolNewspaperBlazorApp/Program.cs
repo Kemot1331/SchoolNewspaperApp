@@ -35,6 +35,7 @@ namespace SchoolNewspaperBlazorApp
             builder.Services.AddScoped<IFileService, FileService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IPermissionService, PermissionService>();
+            builder.Services.AddScoped<ToastService>();
 
             builder.Services.AddAuthentication(
                 CookieAuthenticationDefaults.AuthenticationScheme)

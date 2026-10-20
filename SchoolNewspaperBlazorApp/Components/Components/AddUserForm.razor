@@ -1,28 +1,48 @@
 ﻿@using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
+@inject IAuthService authService
+@inject ToastService toastService
+
+
 <form @onsubmit="AddUserAsync" @onsubmit:preventDefault>
-    <label class="form-label">Tytuł</label>
-    <input @bind="Login" class="form-control mb-3" placeholder="Login" />
+    <label class="form-label">Login</label>
+    <input @bind="Login" class="form-control mb-3" placeholder="Login" autocomplete="off" />
 
     <label class="form-label">E-mail</label>
-    <input @bind="Email" class="form-control mb-4" placeholder="E-Mail" />
+    <input @bind="Email" type="email" class="form-control mb-3" placeholder="E-Mail" autocomplete="off" />
 
-    <label class="form-label">Treść</label>
-    <input @bind="Password" class="form-control mb-4" placeholder="Hasło" />
+    <label class="form-label">Hasło</label>
+    <input @bind="Password" type="password" class="form-control mb-4" placeholder="Hasło" autocomplete="new-password" />
 
     <button type="submit" class="btn btn-primary w-100">Dodaj</button>
 </form>
 
 
 @code {
-    public required string Login { get; set; }
-    public required string Password { get; set; }
-    public required string Email { get; set; }
-    [Inject]
-    public IAuthService AuthService { get; set; }
+    private string Login { get; set; } = "";
+    private string Password { get; set; } = "";
+    private string Email { get; set; } = "";
 
-    public async Task AddUserAsync()
+    private async Task AddUserAsync()
     {
-        await AuthService.AddUserAsync(Login, Password, Email);
-    }
+        if (string.IsNullOrWhiteSpace(Login) || string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(Email))
+        {
+            toastService.Error("Uzupełnij wszystkie pola.");
+            return;
+        }
 
+        try
+        {
+            await authService.AddUserAsync(Login.Trim(), Password, Email.Trim());
+            toastService.Success("Dodano użytkownika.");
+
+            Login = "";
+            Email = "";
+            Password = "";
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się dodać użytkownika.");
+        }
+    }
 }

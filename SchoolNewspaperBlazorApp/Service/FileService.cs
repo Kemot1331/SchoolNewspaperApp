@@ -41,7 +41,11 @@ namespace SchoolNewspaperBlazorApp.Service
         public async Task<int> UploadImage(IBrowserFile file)
         {
             bool hasPermission =  await _permissionService.HasPermissionAsync(EnumPermissions.AddArticle);
-            if(!hasPermission) return 0;
+            bool isMaster = await _permissionService.HasPermissionAsync(EnumPermissions.Master);
+            if (!hasPermission && !isMaster)
+            {
+                throw new Exception("You do not have permission to upload images.");
+            }
             Directory.CreateDirectory(uploadPath);
 
             string extension = Path.GetExtension(file.Name);

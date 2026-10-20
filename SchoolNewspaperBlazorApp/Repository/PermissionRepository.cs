@@ -28,7 +28,6 @@ public class PermissionRepository : IPermissionRepository
             return false;
         }
         await using var context = await _factory.CreateDbContextAsync();
-
         return await context.UserPermissions
             .AnyAsync(up => up.UserId == permissionId && up.Permission.PermissionsName == permission);
     }
