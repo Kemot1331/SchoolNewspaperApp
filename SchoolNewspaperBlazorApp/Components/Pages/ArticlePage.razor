@@ -18,9 +18,22 @@
         <h1 class="article-page__title">@article.Title</h1>
 
 
-        <div class="article-page__content">
-            @article.Text
-        </div>
+        <div class="article-page__content">@article.Text</div>
+
+        @if (galleryUrls.Count > 0)
+        {
+            <div class="article-gallery"
+                 style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .75rem; margin: 2rem 0;">
+                @foreach (var url in galleryUrls)
+                {
+                    <a href="@url" target="_blank" rel="noopener"
+                       style="display: block; overflow: hidden; border: 1px solid #dde3ec; border-radius: 12px; background: #f3f5f9;">
+                        <img src="@url" alt="@article.Title" loading="lazy"
+                             style="display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: contain;" />
+                    </a>
+                }
+            </div>
+        }
 
         <div class="article-page__meta">
             <span class="article-page__author">@article.Author</span>
@@ -34,6 +47,7 @@
 
     public Article? article;
     private string? imageUrl;
+    private List<string> galleryUrls = new();
 
     [Inject]
     public IArticleService articleService { get; set; } = default!;
@@ -44,13 +58,27 @@
     protected override async Task OnInitializedAsync()
     {
         article = await articleService.GetArticleByIdAsync(Id);
-
-        if (article != null)
+        if (article == null)
         {
-            var fileName = await fileService.GetFileNameByIdAsync(article.FileId);
-            if (!string.IsNullOrWhiteSpace(fileName))
+            return;
+        }
+
+        var fileName = await fileService.GetFileNameByIdAsync(article.FileId);
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            imageUrl = $"/Images/{fileName}";
+        }
+
+        var galleryImages = article.Images
+            .Where(i => i.FileId != article.FileId)
+            .OrderBy(i => i.Order);
+
+        foreach (var image in galleryImages)
+        {
+            var name = await fileService.GetFileNameByIdAsync(image.FileId);
+            if (!string.IsNullOrWhiteSpace(name))
             {
-                imageUrl = $"/Images/{fileName}";
+                galleryUrls.Add($"/Images/{name}");
             }
         }
     }

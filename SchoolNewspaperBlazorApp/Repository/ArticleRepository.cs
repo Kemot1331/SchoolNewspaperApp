@@ -30,7 +30,7 @@ namespace SchoolNewspaperBlazorApp.Repository
         {
             await using var context = await _factory.CreateDbContextAsync();
             var article = await context.Articles
-                .AsNoTracking()
+                .Include(a => a.Images)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (article == null)

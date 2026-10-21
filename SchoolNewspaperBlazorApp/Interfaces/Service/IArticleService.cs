@@ -5,7 +5,7 @@ namespace SchoolNewspaperBlazorApp.Interfaces.Service
 {
     public interface IArticleService
     {
-        Task AddArticleAsync(string title, string text, string author, int id);
+        Task AddArticleAsync(string title, string text, string author, List<int> fileIds);
         Task<List<Article>> GetAllArticlesAsync();
         Task<Article> GetArticleByIdAsync(int id);
         Task RemoveArticleByIdAsync(int id);

@@ -10,7 +10,7 @@ namespace SchoolNewspaperBlazorApp.Data
         public required string Author { get; set; }
         public DateTime PublishDate { get; set; }
         public int FileId { get; set; }
-
+        public ICollection<ArticleImage> Images { get; set; }
     }
 
     

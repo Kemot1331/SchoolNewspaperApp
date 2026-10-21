@@ -8,15 +8,40 @@
 <div class="add-article-form">
     <h1 class="add-article-form__title">Dodaj artykuł</h1>
 
-    @if (previewImage != null)
+    <label class="form-label">@(IsEdit ? "Nowe zdjęcie (zastąpi obecne)" : "Zdjęcia")</label>
+    <InputFile @key="formKey"
+               OnChange="ChoosePhotos"
+               accept="image/*"
+               multiple="@(!IsEdit)"
+               class="form-control mb-3" />
+
+    @if (photos.Count > 0)
     {
-        <div class="image-preview-wrap">
-            <img src="@previewImage" alt="zdjęcie" class="image-preview" />
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            @for (var i = 0; i < photos.Count; i++)
+            {
+                var index = i;
+                <div style="position: relative;">
+                    <img src="@photos[index].Preview"
+                         alt="Zdjęcie @(index + 1)"
+                         style="width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid #dde3ec;" />
+
+                    @if (index == 0)
+                    {
+                        <span style="position: absolute; left: 4px; bottom: 4px; padding: 1px 7px; border-radius: 999px; background: #183a68; color: #fff; font-size: 10px; font-weight: 700;">
+                            Okładka
+                        </span>
+                    }
+
+                    <button type="button"
+                            class="btn btn-sm btn-danger"
+                            style="position: absolute; top: 2px; right: 2px; padding: 0 7px; line-height: 1.4;"
+                            aria-label="Usuń zdjęcie"
+                            @onclick="() => RemovePhoto(index)">×</button>
+                </div>
+            }
         </div>
     }
-
-    <label class="form-label">Zdjęcie</label>
-    <InputFile @key="formKey" OnChange="ChoosePhoto" accept="image/*" class="form-control mb-3" />
 
     <form @onsubmit="SubmitForm" @onsubmit:preventDefault>
         <label class="form-label">Tytuł</label>
@@ -41,6 +66,9 @@
 
 
 @code {
+    private const int MaxFiles = 10;
+    private readonly List<(IBrowserFile File, string Preview)> photos = new();
+
     [Parameter]
     public bool IsEdit { get; set; }
     [Parameter]
@@ -49,12 +77,11 @@
     public bool CanDelete { get; set; }
     [Parameter]
     public EventCallback OnDeleted { get; set; }
+
     private string title = "";
     private string text = "";
     private string author = "";
-    private string? previewImage;
     private int formKey;
-    IBrowserFile? file;
 
     protected override void OnParametersSet()
     {
@@ -68,7 +95,7 @@
 
     private async Task SubmitForm()
     {
-        if (!IsEdit && file == null)
+        if (!IsEdit && photos.Count == 0)
         {
             toastService.Error("Dodając artykuł, musisz dodać zdjęcie.");
             return;
@@ -76,29 +103,30 @@
 
         try
         {
-            // przy edycji bez nowego zdjęcia zostaje dotychczasowe (wcześniej wpadało tu 0)
-            int id = IsEdit && Article != null ? Article.FileId : 0;
-            if (file != null)
-            {
-                id = await fileService.UploadImage(file);
-            }
-
             if (IsEdit && Article != null)
             {
-                await articleService.UpdateArticleByIdAsync(Article.Id, title, text, author, id);
+                // bez nowego zdjęcia zostaje dotychczasowa okładka
+                int fileId = Article.FileId;
+                if (photos.Count > 0)
+                {
+                    fileId = await fileService.UploadImage(photos[0].File);
+                }
+
+                await articleService.UpdateArticleByIdAsync(Article.Id, title, text, author, fileId);
                 toastService.Success("Artykuł został zapisany.");
-                ClearPhoto();
+                ClearPhotos();
             }
             else
             {
-                await articleService.AddArticleAsync(title, text, author, id);
+                var fileIds = await fileService.UploadImagesAsync(photos.Select(p => p.File));
+                await articleService.AddArticleAsync(title, text, author, fileIds);
                 toastService.Success("Artykuł został dodany.");
 
                 // czyścimy formularz, żeby nie dodać tego samego artykułu dwa razy
                 title = "";
                 text = "";
                 author = "";
-                ClearPhoto();
+                ClearPhotos();
             }
         }
         catch (Exception)
@@ -126,16 +154,48 @@
         }
     }
 
-    private async Task ChoosePhoto(InputFileChangeEventArgs e)
+    private async Task ChoosePhotos(InputFileChangeEventArgs e)
     {
-        file = e.File;
-        previewImage = await fileService.GetPreviewAsync(file);
+        IReadOnlyList<IBrowserFile> selected;
+        try
+        {
+            selected = e.GetMultipleFiles(IsEdit ? 1 : MaxFiles);
+        }
+        catch (InvalidOperationException)
+        {
+            toastService.Error($"Możesz wybrać maksymalnie {MaxFiles} zdjęć naraz.");
+            return;
+        }
+
+        // przy edycji nowe zdjęcie zastępuje poprzedni wybór
+        if (IsEdit)
+        {
+            photos.Clear();
+        }
+
+        foreach (var f in selected)
+        {
+            if (photos.Count >= MaxFiles)
+            {
+                break;
+            }
+
+            try
+            {
+                photos.Add((f, await fileService.GetPreviewAsync(f)));
+            }
+            catch (Exception)
+            {
+                toastService.Error($"Nie udało się wczytać pliku {f.Name} (maks. 5 MB).");
+            }
+        }
     }
 
-    private void ClearPhoto()
+    private void RemovePhoto(int index) => photos.RemoveAt(index);
+
+    private void ClearPhotos()
     {
-        file = null;
-        previewImage = null;
+        photos.Clear();
         formKey++;
     }
 }

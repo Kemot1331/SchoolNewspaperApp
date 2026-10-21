@@ -12,6 +12,8 @@ namespace SchoolNewspaperBlazorApp.Service
         private readonly string uploadPath;
         private readonly IPermissionService _permissionService;
 
+        private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+        
         public FileService(
             IFileRepository fileRepository,
             IWebHostEnvironment environment,
@@ -80,6 +82,27 @@ namespace SchoolNewspaperBlazorApp.Service
         {
             var file = await _fileRepository.GetFileByIdAsync(id);
             return file.FileName;
+        }
+
+        public async Task<List<int>> UploadImagesAsync(IEnumerable<IBrowserFile> files)
+        {
+            var list = files.ToList();
+
+            foreach (var file in list)
+            {
+                var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+                if (!AllowedExtensions.Contains(extension))
+                {
+                    throw new InvalidOperationException("Invalid image extension.");
+                }
+            }
+            var ids = new List<int>();
+            foreach (var file in list)
+            {
+                ids.Add(await UploadImage(file));
+            }
+
+            return ids;
         }
     }
 }

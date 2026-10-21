@@ -52,7 +52,7 @@
             else
             {
                 <div class="site-header__actions">
-                    <NavLink class="header-login" href="/login">
+                    <NavLink class="header-login" href="/logout">
                         <span>♙</span>
                         Wyloguj się
                     </NavLink>
@@ -67,12 +67,14 @@
                     <span class="site-status__dot"></span>
                     <span>Twoje szkolne centrum informacji</span>
                 </div>
-
-                <NavLink class="admin-link" href="/adminPanel">
-                    <span class="admin-link__icon">⚙</span>
-                    Panel administratora
-                    <span>↗</span>
-                </NavLink>
+                @if (IsLoggedIn)
+                {
+                    <NavLink class="admin-link" href="/adminPanel">
+                        <span class="admin-link__icon">⚙</span>
+                        Panel administratora
+                        <span>↗</span>
+                    </NavLink>
+                }
             </div>
         </div>
     </header>
