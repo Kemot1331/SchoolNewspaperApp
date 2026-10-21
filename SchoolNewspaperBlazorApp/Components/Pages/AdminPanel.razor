@@ -8,7 +8,9 @@
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 <div class="admin-page">
+
     <ToastHost />
+
     <section class="admin-header">
         <div class="admin-header__content">
             <span class="admin-header__eyebrow">
@@ -266,7 +268,10 @@
         }
         else if (view == 4)
         {
-            <ArticleForm IsEdit="true" Article="articleToEdit"/>
+            <ArticleForm IsEdit="true"
+                         Article="articleToEdit"
+                         CanDelete="canDeleteArticle"
+                         OnDeleted="AfterArticleDeletedAsync" />
         }
         else if (view == 5)
         {
@@ -296,12 +301,14 @@
         canManageUsers = await HasAsync(EnumPermissions.ManageUser);
     }
 
+    // Master ma dostęp do wszystkiego
     private async Task<bool> HasAsync(EnumPermissions permission)
     {
         return await permissionService.HasPermissionAsync(permission)
                || await permissionService.HasPermissionAsync(EnumPermissions.Master);
     }
 
+    // Każdy widok ma swoje uprawnienie – odmawiamy też wtedy, gdy ktoś wywoła SetView inną drogą niż przyciskiem
     private bool CanOpen(int target) => target switch
     {
         0 => true,
@@ -330,6 +337,13 @@
             return;
         }
 
+        articleList = await articleService.GetAllArticlesAsync();
+        SetView(1);
+    }
+
+    public async Task AfterArticleDeletedAsync()
+    {
+        articleToEdit = null;
         articleList = await articleService.GetAllArticlesAsync();
         SetView(1);
     }

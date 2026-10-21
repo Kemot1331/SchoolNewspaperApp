@@ -28,6 +28,7 @@ public class PermissionRepository : IPermissionRepository
             return false;
         }
         await using var context = await _factory.CreateDbContextAsync();
+
         return await context.UserPermissions
             .AnyAsync(up => up.UserId == permissionId && up.Permission.PermissionsName == permission);
     }
@@ -46,6 +47,7 @@ public class PermissionRepository : IPermissionRepository
     {
         await using var context = await _factory.CreateDbContextAsync();
 
+        // Master nigdy nie jest zmieniane z panelu
         var wanted = permissions
             .Where(p => p != EnumPermissions.Master)
             .Distinct()
@@ -76,14 +78,19 @@ public class PermissionRepository : IPermissionRepository
                 var row = rows.FirstOrDefault(r => r.PermissionsName == permission);
                 if (row == null)
                 {
-                    row = new Permission { PermissionsName = permission };
+                    row = new Permission
+                    {
+                        PermissionsName = permission,
+                        PermissionViewName = permission.ToString()
+                    };
                     context.Permissions.Add(row);
                 }
 
                 context.UserPermissions.Add(new UserPermission
                 {
                     UserId = userId,
-                    Permission = row
+                    Permission = row,
+                    PermissionName = permission.ToString()
                 });
             }
         }

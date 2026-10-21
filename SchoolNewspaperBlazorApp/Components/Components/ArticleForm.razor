@@ -29,6 +29,13 @@
         <input @bind="author" class="form-control mb-4" placeholder="Imię i nazwisko" />
 
         <button type="submit" class="btn btn-primary w-100">@( IsEdit ? "Zatwierdź edycje" : "Dodaj artykuł")</button>
+
+        @if (IsEdit && CanDelete)
+        {
+            <button type="button" class="btn btn-outline-danger w-100 mt-2" @onclick="DeleteAsync">
+                Usuń artykuł
+            </button>
+        }
     </form>
 </div>
 
@@ -38,6 +45,10 @@
     public bool IsEdit { get; set; }
     [Parameter]
     public Article? Article { get; set; }
+    [Parameter]
+    public bool CanDelete { get; set; }
+    [Parameter]
+    public EventCallback OnDeleted { get; set; }
     private string title = "";
     private string text = "";
     private string author = "";
@@ -93,6 +104,25 @@
         catch (Exception)
         {
             toastService.Error("Nie udało się zapisać artykułu.");
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!CanDelete || Article == null)
+        {
+            return;
+        }
+
+        try
+        {
+            await articleService.RemoveArticleByIdAsync(Article.Id);
+            toastService.Success("Artykuł został usunięty.");
+            await OnDeleted.InvokeAsync();
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się usunąć artykułu.");
         }
     }
 
