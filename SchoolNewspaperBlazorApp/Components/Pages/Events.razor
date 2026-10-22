@@ -78,9 +78,13 @@ else
 
     private static string Icon(ArticleType type) => type switch
     {
-        ArticleType.news => "📰",
-        ArticleType.events => "🎉",
-        ArticleType.announcement => "📢",
+        ArticleType.Announcements => "📢",
+        ArticleType.Substitute => "🔄",
+        ArticleType.Events => "🎉",
+        ArticleType.Competitions => "🏆",
+        ArticleType.Admisions => "🎓",
+        ArticleType.Exams => "📝",
+        ArticleType.StudentCouncil => "🏫",
         _ => "📌"
     };
 
