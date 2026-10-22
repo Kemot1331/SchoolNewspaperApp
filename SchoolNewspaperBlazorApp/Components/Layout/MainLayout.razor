@@ -52,10 +52,12 @@
             else
             {
                 <div class="site-header__actions">
-                    <NavLink class="header-login" href="/logout">
-                        <span>♙</span>
-                        Wyloguj się
-                    </NavLink>
+                    <form method="post" action="/auth/logout">
+                        <button type="submit" class="header-login" style="cursor: pointer;">
+                            <span>♙</span>
+                            Wyloguj się
+                        </button>
+                    </form>
                 </div>
             }
 
@@ -118,8 +120,6 @@
     </footer>
 </div>
 @code{
-    [Inject]
-    private AuthenticationStateProvider authState { get; set; }
     private bool IsLoggedIn;
 
     protected override async Task OnInitializedAsync()

@@ -86,6 +86,14 @@ namespace SchoolNewspaperBlazorApp
                     principal);
                 return Results.Redirect("/adminPanel");
             });
+            
+            //wylogowanie sie
+            app.MapPost("/auth/logout", async (HttpContext context) =>
+            {
+                await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return Results.Redirect("/");
+            });
+            
             var imagesPath = Path.Combine(
                 builder.Environment.ContentRootPath,
                 "Images"
