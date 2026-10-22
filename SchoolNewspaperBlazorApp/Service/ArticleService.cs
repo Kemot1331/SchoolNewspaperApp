@@ -16,7 +16,7 @@ namespace SchoolNewspaperBlazorApp.Service
             _permissionService = permissionService;
         }
 
-        public async Task AddArticleAsync(string title, string text, string author, List<int> fileIds, EventsTypes? eventType = null)
+        public async Task AddArticleAsync(string title, string text, string author, List<int> fileIds, ArticleType? eventType = null)
         {
             bool hasPermission =  await _permissionService.HasPermissionAsync(EnumPermissions.AddArticle);
             if(!hasPermission) return;
@@ -58,7 +58,7 @@ namespace SchoolNewspaperBlazorApp.Service
         }
 
         public async Task UpdateArticleByIdAsync(int id, string title, string text, string author, int fileId,
-            EventsTypes? eventType = null)
+            ArticleType? eventType = null)
         {
             
             var article = new Article

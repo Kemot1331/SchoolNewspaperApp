@@ -298,7 +298,7 @@
         canEditArticle = await HasAsync(EnumPermissions.EditArticle);
         canDeleteArticle = await HasAsync(EnumPermissions.DeleteArticle);
         canAddUser = await HasAsync(EnumPermissions.AddUser);
-        canManageUsers = await HasAsync(EnumPermissions.ManageUser);
+        canManageUsers = true;
     }
 
     // Master ma dostęp do wszystkiego

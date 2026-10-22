@@ -6,47 +6,96 @@
 
 <PageTitle>Wydarzenia | Gazetka ETI</PageTitle>
 
-<div class="section-heading">
-    <div>
-        <h1>Wydarzenia</h1>
-        <p>Wycieczki, akademie i imprezy szkolne w jednym miejscu.</p>
-    </div>
-</div>
+<section class="home-hero">
+    <span class="home-hero__eyebrow">Gazetka szkolna</span>
+    <h1>Wydarzenia</h1>
+    <p>Nowości, wydarzenia i ogłoszenia w jednym miejscu. Wybierz kategorię, żeby zobaczyć tylko to, co Cię interesuje.</p>
+</section>
 
-@if (articles.Count == 0)
+<nav class="events-filter"
+     aria-label="Kategorie artykułów"
+     style="display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 36px;">
+    <a class="events-chip @(selected == null ? "is-active" : "")"
+       href="/wydarzenia"
+       style="@ChipStyle(selected == null)">
+        Wszystkie
+        <span class="events-chip__count" style="@CountStyle(selected == null)">@articles.Count</span>
+    </a>
+
+    @foreach (var type in AllTypes)
+    {
+        var active = selected == type;
+
+        <a class="events-chip @(active ? "is-active" : "")"
+           href="/wydarzenia?typ=@type"
+           style="@ChipStyle(active)">
+            <span aria-hidden="true">@Icon(type)</span>
+            @type.ToLabel()
+            <span class="events-chip__count" style="@CountStyle(active)">@Count(type)</span>
+        </a>
+    }
+</nav>
+
+@if (Visible.Count == 0)
 {
-    <p class="empty-state">Nie ma jeszcze żadnych wydarzeń.</p>
+    <p class="empty-state">
+        @(selected == null ? "Nie ma jeszcze żadnych artykułów." : "W tej kategorii nie ma jeszcze artykułów.")
+    </p>
 }
 else
 {
-    foreach (var type in Enum.GetValues<EventsTypes>())
-    {
-        var items = articles.Where(a => a.EventsType == type).ToList();
-        if (items.Count == 0)
-        {
-            continue;
-        }
-
-        <section style="margin-bottom: 2.5rem;">
-            <div class="section-heading">
-                <div>
-                    <h2>@type.ToLabel()</h2>
-                </div>
-            </div>
-
-            <ArticleCard Articles="items" permissions="false" />
-        </section>
-    }
+    <ArticleCard Articles="Visible" permissions="false" />
 }
 
 @code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "typ")]
+    public string? TypeQuery { get; set; }
+
+    private static readonly ArticleType[] AllTypes = Enum.GetValues<ArticleType>();
+
     private List<Article> articles = new();
+
+    // wybrana kategoria z adresu (?typ=announcement); brak lub błędna wartość = wszystkie
+    private ArticleType? selected =>
+        Enum.TryParse<ArticleType>(TypeQuery, true, out var parsed) && Enum.IsDefined(parsed)
+            ? parsed
+            : null;
+
+    private List<Article> Visible =>
+        selected is ArticleType only
+            ? articles.Where(a => a.EventsType == only).ToList()
+            : articles;
 
     protected override async Task OnInitializedAsync()
     {
         articles = (await articleService.GetAllArticlesAsync())
-            .Where(a => a.EventsType != null)
             .OrderByDescending(a => a.PublishDate)
             .ToList();
     }
+
+    private int Count(ArticleType type) => articles.Count(a => a.EventsType == type);
+
+    private static string Icon(ArticleType type) => type switch
+    {
+        ArticleType.news => "📰",
+        ArticleType.events => "🎉",
+        ArticleType.announcement => "📢",
+        _ => "📌"
+    };
+
+    // Style inline – działają niezależnie od app.css i jego cache
+    private static string ChipStyle(bool active) =>
+        "display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px;"
+        + " border-radius: 999px; font-size: 12px; font-weight: 750; line-height: 1.2;"
+        + " text-decoration: none; white-space: nowrap;"
+        + (active
+            ? " border: 1px solid #183a68; background: #183a68; color: #ffffff; box-shadow: 0 4px 0 #122f55;"
+            : " border: 1px solid #dde3ec; background: #ffffff; color: #55637a;");
+
+    private static string CountStyle(bool active) =>
+        "min-width: 22px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; text-align: center;"
+        + (active
+            ? " background: rgba(255, 255, 255, .18); color: #ffffff;"
+            : " background: #e8ecf3; color: #183a68;");
 }

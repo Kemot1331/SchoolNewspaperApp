@@ -777,6 +777,56 @@ h1, h2, h3, h4 {
     text-transform: uppercase;
 }
 
+.events-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 36px;
+}
+
+.events-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid var(--eti-border);
+    border-radius: 999px;
+    background: #fff;
+    color: #55637a;
+    font-size: 12px;
+    font-weight: 750;
+    transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.events-chip:hover {
+    transform: translateY(-1px);
+    border-color: var(--eti-border-strong);
+    color: var(--eti-blue);
+}
+
+.events-chip.is-active {
+    border-color: var(--eti-blue);
+    background: var(--eti-blue);
+    box-shadow: 0 4px 0 var(--eti-blue-hover);
+    color: #fff;
+}
+
+.events-chip__count {
+    min-width: 22px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--eti-tint-strong);
+    color: var(--eti-blue);
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.events-chip.is-active .events-chip__count {
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+}
+
 .admin-section-heading h2,
 .admin-content-panel__header h2 {
     margin: 0;

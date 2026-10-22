@@ -72,6 +72,7 @@ namespace SchoolNewspaperBlazorApp.Repository
             articleById.Title = newArticle.Title;
             articleById.Author = newArticle.Author;
             articleById.Text = newArticle.Text;
+            articleById.EventsType = newArticle.EventsType;
                 
              await context.SaveChangesAsync();
         }

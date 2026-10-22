@@ -11,7 +11,7 @@ namespace SchoolNewspaperBlazorApp.Data
         public DateTime PublishDate { get; set; }
         public int FileId { get; set; }
         public ICollection<ArticleImage> Images { get; set; }
-        public EventsTypes? EventsType { get; set; }
+        public ArticleType? EventsType { get; set; }
     }
 
     
