@@ -1,0 +1,52 @@
+﻿@page "/wydarzenia"
+@using SchoolNewspaperBlazorApp.Components.Components
+@using SchoolNewspaperBlazorApp.Data
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@inject IArticleService articleService
+
+<PageTitle>Wydarzenia | Gazetka ETI</PageTitle>
+
+<div class="section-heading">
+    <div>
+        <h1>Wydarzenia</h1>
+        <p>Wycieczki, akademie i imprezy szkolne w jednym miejscu.</p>
+    </div>
+</div>
+
+@if (articles.Count == 0)
+{
+    <p class="empty-state">Nie ma jeszcze żadnych wydarzeń.</p>
+}
+else
+{
+    foreach (var type in Enum.GetValues<EventsTypes>())
+    {
+        var items = articles.Where(a => a.EventsType == type).ToList();
+        if (items.Count == 0)
+        {
+            continue;
+        }
+
+        <section style="margin-bottom: 2.5rem;">
+            <div class="section-heading">
+                <div>
+                    <h2>@type.ToLabel()</h2>
+                </div>
+            </div>
+
+            <ArticleCard Articles="items" permissions="false" />
+        </section>
+    }
+}
+
+@code {
+    private List<Article> articles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        articles = (await articleService.GetAllArticlesAsync())
+            .Where(a => a.EventsType != null)
+            .OrderByDescending(a => a.PublishDate)
+            .ToList();
+    }
+}

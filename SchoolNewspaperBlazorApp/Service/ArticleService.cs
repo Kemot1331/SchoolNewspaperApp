@@ -15,7 +15,8 @@ namespace SchoolNewspaperBlazorApp.Service
             _articleRepository = articleRepository;
             _permissionService = permissionService;
         }
-        public async Task AddArticleAsync(string title, string text, string author, List<int> fileIds)
+
+        public async Task AddArticleAsync(string title, string text, string author, List<int> fileIds, EventsTypes? eventType = null)
         {
             bool hasPermission =  await _permissionService.HasPermissionAsync(EnumPermissions.AddArticle);
             if(!hasPermission) return;
@@ -28,10 +29,13 @@ namespace SchoolNewspaperBlazorApp.Service
                 FileId = fileIds.FirstOrDefault(),
                 Images = fileIds
                     .Select((id, index) => new ArticleImage { FileId = id, Order = index })
-                    .ToList()   
+                    .ToList(),
+                EventsType = eventType
+                
             };
             await _articleRepository.AddArticleAsync(article);
         }
+
         public async Task<List<Article>> GetAllArticlesAsync()
         {
             return await _articleRepository.GetAllArticlesAsync();
@@ -53,15 +57,18 @@ namespace SchoolNewspaperBlazorApp.Service
             }
         }
 
-        public async Task UpdateArticleByIdAsync(int id, string title, string text, string author, int fileId)
+        public async Task UpdateArticleByIdAsync(int id, string title, string text, string author, int fileId,
+            EventsTypes? eventType = null)
         {
+            
             var article = new Article
             {
                 Id = id,
                 Title = title,
                 Text = text,
                 Author = author,
-                FileId =  fileId
+                FileId =  fileId,
+                EventsType = eventType
             };
             await _articleRepository.UpdateArticleByIdAsync(id,article);
         }
