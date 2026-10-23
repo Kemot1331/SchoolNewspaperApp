@@ -7,9 +7,7 @@ namespace SchoolNewspaperBlazorApp.Data
     {
         public int Id { get; set; }
         public required string Title { get; set; }
-
         public required string Text { get; set; }
-
         // Zrzut imienia i nazwiska twórcy z chwili dodania (artykuły sprzed zmian mają tu wpisanego autora ręcznie)
         public string Author { get; set; } = string.Empty;
         public int? UserId { get; set; }
@@ -18,7 +16,9 @@ namespace SchoolNewspaperBlazorApp.Data
         public int FileId { get; set; }
         public ICollection<ArticleImage> Images { get; set; }
         public ArticleType? EventsType { get; set; }
-        public bool isDeleted { get; set; } = false;
+
+        // Soft delete: 0 = widoczny, 1 = usunięty (wiersz zostaje w bazie)
+        public bool IsDeleted { get; set; }
 
         // "Imię Nazwisko · Rola" – na podstawie danych użytkownika; dla starych artykułów samo Author
         [NotMapped]
@@ -37,4 +37,6 @@ namespace SchoolNewspaperBlazorApp.Data
             }
         }
     }
+
+    
 }

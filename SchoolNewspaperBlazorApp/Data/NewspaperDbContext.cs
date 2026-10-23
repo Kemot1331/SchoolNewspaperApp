@@ -48,6 +48,14 @@ namespace SchoolNewspaperBlazorApp.Data
                 .WithMany()
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Soft delete: usunięte wiersze znikają ze wszystkich zapytań (Include też).
+            // Zapytanie, które ma je zobaczyć, dopisuje .IgnoreQueryFilters().
+            mb.Entity<User>().HasQueryFilter(u => !u.IsDeleted);
+            mb.Entity<Article>().HasQueryFilter(a => !a.IsDeleted);
+            // Rola i uprawnienia usuniętego użytkownika też przestają obowiązywać
+            mb.Entity<Role>().HasQueryFilter(r => !r.User.IsDeleted);
+            mb.Entity<UserPermission>().HasQueryFilter(up => !up.User.IsDeleted);
         }
     }
 

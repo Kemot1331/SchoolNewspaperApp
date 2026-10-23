@@ -59,7 +59,7 @@ namespace SchoolNewspaperBlazorApp.Repository
                 throw new Exception($"Article with ID {id} not found.");
             }
 
-            context.Articles.Remove(article);
+            article.IsDeleted = true;
             await context.SaveChangesAsync();
         }
 

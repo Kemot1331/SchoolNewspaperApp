@@ -32,13 +32,14 @@
             public async Task DeleteUserByIdAsync(int id)
             {
                 await using var context = await _factory.CreateDbContextAsync();
-                var user = await context.User.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+                // filtr soft delete pomija już usuniętych, więc drugi raz konta nie "usuniemy"
+                var user = await context.User.FirstOrDefaultAsync(u => u.Id == id);
 
                 if (user == null)
                 {
                     throw new Exception("Konto nie istnieje");
                 }
-                context.User.Remove(user);
+                user.IsDeleted = true;
                 await context.SaveChangesAsync();
             }
 

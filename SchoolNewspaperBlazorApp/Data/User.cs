@@ -15,6 +15,9 @@ namespace SchoolNewspaperBlazorApp.Data
         // W bazie kolumna nazywa się AddedBy
         [Column("AddedBy")]
         public string AddBy { get; set; } = string.Empty;
+
+        // Soft delete: 0 = aktywne konto, 1 = usunięte (wiersz zostaje w bazie)
+        public bool IsDeleted { get; set; }
         public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
         public Role? Role { get; set; }
     }
