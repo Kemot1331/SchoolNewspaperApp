@@ -16,5 +16,6 @@ namespace SchoolNewspaperBlazorApp.Data
         [Column("AddedBy")]
         public string AddBy { get; set; } = string.Empty;
         public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
+        public int RoleId { get; set; }
     }
 }

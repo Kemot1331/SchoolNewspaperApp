@@ -16,7 +16,7 @@
      aria-label="Kategorie artykułów"
      style="display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 36px;">
     <a class="events-chip @(selected == null ? "is-active" : "")"
-       href="/wydarzenia"
+       href="/aktualnosci"
        style="@ChipStyle(selected == null)">
         Wszystkie
         <span class="events-chip__count" style="@CountStyle(selected == null)">@articles.Count</span>
@@ -27,7 +27,7 @@
         var active = selected == type;
 
         <a class="events-chip @(active ? "is-active" : "")"
-           href="/wydarzenia?typ=@type"
+           href="/aktualnosci?typ=@type"
            style="@ChipStyle(active)">
             <span aria-hidden="true">@Icon(type)</span>
             @type.ToLabel()
