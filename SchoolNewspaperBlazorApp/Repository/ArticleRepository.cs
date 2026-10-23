@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
@@ -7,10 +8,12 @@ namespace SchoolNewspaperBlazorApp.Repository
     public class ArticleRepository : IArticleRepository
     {
         private readonly IDbContextFactory<NewspaperDbContext> _factory;
+        private readonly ILogger<ArticleRepository> _logger;
 
-        public ArticleRepository(IDbContextFactory<NewspaperDbContext> factory)
+        public ArticleRepository(IDbContextFactory<NewspaperDbContext> factory, ILogger<ArticleRepository> logger)
         {
             _factory = factory;
+            _logger = logger;
         }
 
         public async Task AddArticleAsync(Article article)

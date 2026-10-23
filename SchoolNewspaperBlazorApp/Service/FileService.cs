@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
@@ -11,16 +12,19 @@ namespace SchoolNewspaperBlazorApp.Service
         private readonly IFileRepository _fileRepository;
         private readonly string uploadPath;
         private readonly IPermissionService _permissionService;
+        private readonly ILogger<FileService> _logger;
 
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
         
         public FileService(
             IFileRepository fileRepository,
             IWebHostEnvironment environment,
-            IPermissionService permissionService)
+            IPermissionService permissionService,
+            ILogger<FileService> logger)
         {
             _fileRepository = fileRepository;
             _permissionService = permissionService;
+            _logger = logger;
 
             uploadPath = Path.Combine(
                 environment.ContentRootPath,

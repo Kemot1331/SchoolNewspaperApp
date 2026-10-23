@@ -58,23 +58,8 @@ else
                             <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUserAsync(user.Key)">
                                 Anuluj
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => confirmDeleteId = user.Key">
-                                Usuń użytkownika
-                            </button>
                         </div>
 
-                        @if (confirmDeleteId == user.Key)
-                        {
-                            <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                                <span class="small">Na pewno usunąć to konto?</span>
-                                <button type="button" class="btn btn-sm btn-danger" disabled="@saving" @onclick="() => DeleteUserAsync(user.Key)">
-                                    Tak, usuń
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => confirmDeleteId = null">
-                                    Nie
-                                </button>
-                            </div>
-                        }
                     }
                     else
                     {
@@ -96,7 +81,6 @@ else
     private Dictionary<int, string> Users = new();
     private readonly Dictionary<int, string> fullNames = new();
     private int? expandedUserId;
-    private int? confirmDeleteId;
     private HashSet<EnumPermissions> selected = new();
     private bool saving;
     private string? message;
@@ -124,7 +108,6 @@ else
     {
         message = null;
         error = null;
-        confirmDeleteId = null;
 
         if (expandedUserId == userId)
         {
@@ -176,43 +159,6 @@ else
         }
         finally
         {
-            saving = false;
-        }
-    }
-
-    private async Task DeleteUserAsync(int userId)
-    {
-        saving = true;
-        message = null;
-        error = null;
-
-        try
-        {
-            var name = DisplayName(userId, Users.GetValueOrDefault(userId, ""));
-
-            await authService.DeleteUserByIdAsync(userId);
-
-            Users.Remove(userId);
-            fullNames.Remove(userId);
-            expandedUserId = null;
-            toastService.Success($"Usunięto użytkownika {name}.");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            toastService.Error("Nie masz uprawnień do usuwania użytkowników.");
-        }
-        catch (InvalidOperationException ex)
-        {
-            // własne konto lub konto administratora
-            toastService.Error(ex.Message);
-        }
-        catch (Exception)
-        {
-            toastService.Error("Nie udało się usunąć użytkownika.");
-        }
-        finally
-        {
-            confirmDeleteId = null;
             saving = false;
         }
     }

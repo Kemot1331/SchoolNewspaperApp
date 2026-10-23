@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
@@ -9,13 +10,16 @@ public class PermissionService : IPermissionService
 {
     private readonly IPermissionRepository _permissionRepository;
     private readonly AuthenticationStateProvider _authenticationStateProvider;
+    private readonly ILogger<PermissionService> _logger;
 
     public PermissionService(
         IPermissionRepository permissionRepository,
-        AuthenticationStateProvider authenticationStateProvider)
+        AuthenticationStateProvider authenticationStateProvider,
+        ILogger<PermissionService> logger)
     {
         _permissionRepository = permissionRepository;
         _authenticationStateProvider = authenticationStateProvider;
+        _logger = logger;
     }
 
     public async Task<bool> HasPermissionAsync(EnumPermissions permission)

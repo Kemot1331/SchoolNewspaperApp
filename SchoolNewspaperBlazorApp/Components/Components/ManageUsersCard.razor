@@ -1,0 +1,229 @@
+﻿@using SchoolNewspaperBlazorApp.Data
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
+@inject IAuthService authService
+@inject ToastService toastService
+
+<input @bind="search"
+       @bind:event="oninput"
+       class="form-control mb-3"
+       placeholder="Szukaj użytkownika (imię, nazwisko, e-mail)..."
+       autocomplete="off" />
+
+@if (Users.Count == 0)
+{
+    <p class="empty-state">Nie ma jeszcze żadnych użytkowników.</p>
+}
+else if (!Filtered.Any())
+{
+    <p class="empty-state">Nie znaleziono użytkowników.</p>
+}
+else
+{
+    <div class="article-grid">
+        @foreach (var user in Filtered)
+        {
+            var isEditing = editingUserId == user.Key;
+
+            <div class="article-card" @key="user.Key">
+                <div class="article-card__body">
+                    <h5 class="article-card__title">@DisplayName(user.Key, user.Value)</h5>
+
+                    @if (isEditing)
+                    {
+                        <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
+                            <label class="form-label">Login</label>
+                            <input @bind="editLogin" class="form-control mb-3" placeholder="Login" autocomplete="off" />
+
+                            <label class="form-label">E-mail</label>
+                            <input @bind="editEmail" type="email" class="form-control mb-3" placeholder="E-mail" autocomplete="off" />
+
+                            <label class="form-label">Imię</label>
+                            <input @bind="editFirstName" class="form-control mb-3" placeholder="Imię" autocomplete="off" />
+
+                            <label class="form-label">Nazwisko</label>
+                            <input @bind="editLastName" class="form-control mb-3" placeholder="Nazwisko" autocomplete="off" />
+
+                            <label class="form-label">Nowe hasło</label>
+                            <input @bind="editNewPassword" type="password" class="form-control mb-1" placeholder="Zostaw puste, aby nie zmieniać" autocomplete="new-password" />
+                            <p class="small mb-3">Puste pole oznacza, że hasło pozostaje bez zmian.</p>
+
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-primary" disabled="@saving">
+                                    Zapisz
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" @onclick="CancelEdit">
+                                    Anuluj
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-primary" @onclick="() => StartEditAsync(user.Key)">
+                                Edytuj dane
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => AskDelete(user.Key)">
+                                Usuń użytkownika
+                            </button>
+                        </div>
+
+                        @if (confirmDeleteId == user.Key)
+                        {
+                            <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                                <span class="small">Na pewno usunąć to konto?</span>
+                                <button type="button" class="btn btn-sm btn-danger" disabled="@saving" @onclick="() => DeleteUserAsync(user.Key)">
+                                    Tak, usuń
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => confirmDeleteId = null">
+                                    Nie
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private Dictionary<int, string> Users = new();
+    private readonly Dictionary<int, string> fullNames = new();
+    private int? editingUserId;
+    private int? confirmDeleteId;
+    private bool saving;
+    private string search = "";
+
+    private string editLogin = "";
+    private string editEmail = "";
+    private string editFirstName = "";
+    private string editLastName = "";
+    private string editNewPassword = "";
+
+    private IEnumerable<KeyValuePair<int, string>> Filtered =>
+        string.IsNullOrWhiteSpace(search)
+            ? Users
+            : Users.Where(u => DisplayName(u.Key, u.Value).Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        Users = await authService.GetAllUsersAsync();
+
+        foreach (var id in Users.Keys)
+        {
+            fullNames[id] = await authService.GetFullNameAsync(id);
+        }
+    }
+
+    // "Imię Nazwisko (e-mail)"; dla konta bez imienia i nazwiska sam e-mail
+    private string DisplayName(int id, string email)
+    {
+        var fullName = fullNames.GetValueOrDefault(id, "");
+        return string.IsNullOrWhiteSpace(fullName) ? email : $"{fullName} ({email})";
+    }
+
+    private async Task StartEditAsync(int userId)
+    {
+        var details = await authService.GetUserDetailsAsync(userId);
+        if (details == null)
+        {
+            toastService.Error("Nie znaleziono użytkownika.");
+            return;
+        }
+
+        editLogin = details.Login;
+        editEmail = details.Email;
+        editFirstName = details.FirstName;
+        editLastName = details.LastName;
+        editNewPassword = "";
+        confirmDeleteId = null;
+        editingUserId = userId;
+    }
+
+    private void CancelEdit()
+    {
+        editingUserId = null;
+        editNewPassword = "";
+    }
+
+    private async Task SaveAsync()
+    {
+        if (editingUserId is not int userId)
+        {
+            return;
+        }
+
+        saving = true;
+
+        try
+        {
+            await authService.UpdateUserAsync(userId, editLogin, editEmail, editFirstName, editLastName, editNewPassword);
+
+            Users[userId] = editEmail.Trim();
+            fullNames[userId] = $"{editFirstName} {editLastName}".Trim();
+            toastService.Success($"Zapisano dane użytkownika {DisplayName(userId, Users[userId])}.");
+
+            editingUserId = null;
+            editNewPassword = "";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do edycji użytkowników.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // walidacja, zajęty login/e-mail albo konto administratora
+            toastService.Error(ex.Message);
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się zapisać danych użytkownika.");
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void AskDelete(int userId)
+    {
+        editingUserId = null;
+        confirmDeleteId = userId;
+    }
+
+    private async Task DeleteUserAsync(int userId)
+    {
+        saving = true;
+
+        try
+        {
+            var name = DisplayName(userId, Users.GetValueOrDefault(userId, ""));
+
+            await authService.DeleteUserByIdAsync(userId);
+
+            Users.Remove(userId);
+            fullNames.Remove(userId);
+            toastService.Success($"Usunięto użytkownika {name}.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do usuwania użytkowników.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // własne konto lub konto administratora
+            toastService.Error(ex.Message);
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się usunąć użytkownika.");
+        }
+        finally
+        {
+            confirmDeleteId = null;
+            saving = false;
+        }
+    }
+}

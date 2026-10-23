@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
@@ -15,19 +16,22 @@ namespace SchoolNewspaperBlazorApp.Service
         private readonly IRoleRepository _roleRepository;
         private readonly IPermissionService _permissionService;
         private readonly AuthenticationStateProvider _authenticationStateProvider;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             IAuthRepository authRepository,
             IPermissionRepository permissionRepository,
             IRoleRepository roleRepository,
             IPermissionService permissionService,
-            AuthenticationStateProvider authenticationStateProvider)
+            AuthenticationStateProvider authenticationStateProvider,
+            ILogger<AuthService> logger)
         {
             _authRepository = authRepository;
             _permissionRepository = permissionRepository;
             _roleRepository = roleRepository;
             _permissionService = permissionService;
             _authenticationStateProvider = authenticationStateProvider;
+            _logger = logger;
         }
         
         public async Task<Dictionary<int, string>> GetAllUsersAsync()
@@ -78,6 +82,69 @@ namespace SchoolNewspaperBlazorApp.Service
         {
             var user = await _authRepository.GetUserByIdAsync(userId);
             return user == null ? "" : $"{user.FirstName} {user.LastName}".Trim();
+        }
+
+        public async Task<UserDetails?> GetUserDetailsAsync(int id)
+        {
+            var user = await _authRepository.GetUserByIdAsync(id);
+            return user == null
+                ? null
+                : new UserDetails(user.Id, user.Login, user.Email, user.FirstName, user.LastName);
+        }
+
+        public async Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? newPassword)
+        {
+            // 1. Tylko ManageUser lub Master – sprawdzamy to tutaj, a nie tylko w interfejsie
+            var allowed = await _permissionService.HasPermissionAsync(EnumPermissions.ManageUser)
+                          || await _permissionService.HasPermissionAsync(EnumPermissions.Master);
+            if (!allowed)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            login = (login ?? string.Empty).Trim();
+            email = (email ?? string.Empty).Trim();
+            firstName = (firstName ?? string.Empty).Trim();
+            lastName = (lastName ?? string.Empty).Trim();
+
+            if (login.Length == 0 || email.Length == 0)
+            {
+                throw new InvalidOperationException("Login i e-mail są wymagane.");
+            }
+
+            if (!email.Contains('@'))
+            {
+                throw new InvalidOperationException("Podaj poprawny adres e-mail.");
+            }
+
+            // 2. Konto administratora (Master) może edytować tylko jego właściciel
+            //    (inaczej ktoś z ManageUser mógłby zmienić hasło Mastera i się na niego zalogować)
+            var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var currentId = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (currentId != id.ToString())
+            {
+                var permissions = await _permissionRepository.GetUserPermissionsAsync(id);
+                var role = await _roleRepository.GetRoleByUserIdAsync(id);
+                if (permissions.Contains(EnumPermissions.Master) || Role.IsMasterName(role?.RoleName))
+                {
+                    throw new InvalidOperationException("Nie można edytować konta administratora.");
+                }
+            }
+
+            // 3. Login i e-mail muszą być unikalne (po nich logujemy się do panelu)
+            if (await _authRepository.IsLoginOrEmailTakenAsync(id, login, email))
+            {
+                throw new InvalidOperationException("Ten login lub e-mail jest już zajęty.");
+            }
+
+            // 4. Puste hasło = bez zmiany hasła
+            string? passwordHash = null;
+            if (!string.IsNullOrEmpty(newPassword))
+            {
+                passwordHash = new PasswordHasher<string>().HashPassword(null!, newPassword);
+            }
+
+            await _authRepository.UpdateUserAsync(id, login, email, firstName, lastName, passwordHash);
         }
 
         public async Task DeleteUserByIdAsync(int id)

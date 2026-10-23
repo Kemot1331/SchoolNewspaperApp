@@ -1,4 +1,5 @@
-﻿    using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+    using Microsoft.Extensions.Logging;
     using SchoolNewspaperBlazorApp.Data;
     using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
@@ -7,10 +8,12 @@
         public class AuthRepository : IAuthRepository
         {
             private readonly IDbContextFactory<NewspaperDbContext> _factory;
+            private readonly ILogger<AuthRepository> _logger;
 
-            public AuthRepository(IDbContextFactory<NewspaperDbContext> factory)
+            public AuthRepository(IDbContextFactory<NewspaperDbContext> factory, ILogger<AuthRepository> logger)
             {
                 _factory = factory;
+                _logger = logger;
             }
 
             public async Task<Dictionary<int, string>> GetAllUsersAsync()
@@ -43,6 +46,36 @@
             {
                 await using var context = await _factory.CreateDbContextAsync();
                 await context.User.AddAsync(user);
+                await context.SaveChangesAsync();
+            }
+
+            public async Task<bool> IsLoginOrEmailTakenAsync(int excludeUserId, string login, string email)
+            {
+                await using var context = await _factory.CreateDbContextAsync();
+                return await context.User.AnyAsync(u =>
+                    u.Id != excludeUserId && (u.Login == login || u.Email == email));
+            }
+
+            // passwordHash == null oznacza: hasła nie zmieniamy
+            public async Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? passwordHash)
+            {
+                await using var context = await _factory.CreateDbContextAsync();
+                var user = await context.User.FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    throw new Exception("Konto nie istnieje");
+                }
+
+                user.Login = login;
+                user.Email = email;
+                user.FirstName = firstName;
+                user.LastName = lastName;
+                if (passwordHash != null)
+                {
+                    user.Password = passwordHash;
+                }
+
                 await context.SaveChangesAsync();
             }
 

@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
@@ -12,17 +13,20 @@ namespace SchoolNewspaperBlazorApp.Service
         private readonly IAuthRepository _authRepository;
         private readonly IPermissionService _permissionService;
         private readonly AuthenticationStateProvider _authenticationStateProvider;
+        private readonly ILogger<ArticleService> _logger;
 
         public ArticleService(
             IArticleRepository articleRepository,
             IAuthRepository authRepository,
             IPermissionService permissionService,
-            AuthenticationStateProvider authenticationStateProvider)
+            AuthenticationStateProvider authenticationStateProvider,
+            ILogger<ArticleService> logger)
         {
             _articleRepository = articleRepository;
             _authRepository = authRepository;
             _permissionService = permissionService;
             _authenticationStateProvider = authenticationStateProvider;
+            _logger = logger;
         }
 
         public async Task AddArticleAsync(string title, string text, List<int> fileIds, ArticleType? eventType = null)

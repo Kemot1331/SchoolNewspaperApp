@@ -18,6 +18,7 @@ namespace SchoolNewspaperBlazorApp.Data
         public int FileId { get; set; }
         public ICollection<ArticleImage> Images { get; set; }
         public ArticleType? EventsType { get; set; }
+        public bool isDeleted { get; set; } = false;
 
         // "Imię Nazwisko · Rola" – na podstawie danych użytkownika; dla starych artykułów samo Author
         [NotMapped]

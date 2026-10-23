@@ -9,5 +9,7 @@ namespace SchoolNewspaperBlazorApp.Interfaces.Repository
         Task<Dictionary<int, string>> GetAllUsersAsync();
         Task<User>? GetUserByIdAsync(int id);
         Task DeleteUserByIdAsync(int id);
+        Task<bool> IsLoginOrEmailTakenAsync(int excludeUserId, string login, string email);
+        Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? passwordHash);
     }
 }

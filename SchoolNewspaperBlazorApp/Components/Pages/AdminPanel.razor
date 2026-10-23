@@ -158,6 +158,28 @@
                 </button>
             }
 
+            @if (canManageUsers)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(7)">
+
+                    <span class="admin-action__icon">⚙</span>
+
+                    <span class="admin-action__number">06</span>
+
+                    <strong>Zarządzaj użytkownikami</strong>
+
+                    <span class="admin-action__description">
+                        Edytuj dane kont użytkowników albo usuń konta.
+                    </span>
+
+                    <span class="admin-action__footer">
+                        Zarządzaj kontami <span>→</span>
+                    </span>
+                </button>
+            }
+
         </div>
 
         <section class="admin-section">
@@ -199,6 +221,10 @@
                 else if (view == 6)
                 {
                     <span>Nadawanie ról</span>
+                }
+                else if (view == 7)
+                {
+                    <span>Zarządzanie użytkownikami</span>
                 }
             </div>
         </div>
@@ -307,6 +333,10 @@
         {
             <AssignRoleCard></AssignRoleCard>
         }
+        else if (view == 7)
+        {
+            <ManageUsersCard></ManageUsersCard>
+        }
     }
 
 </div>
@@ -348,6 +378,7 @@
         4 => canEditArticle,
         5 => canManageUsers,
         6 => canManageUsers,
+        7 => canManageUsers,
         _ => false
     };
 

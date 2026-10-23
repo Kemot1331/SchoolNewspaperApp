@@ -1,4 +1,5 @@
-﻿using SchoolNewspaperBlazorApp.Data;
+﻿using Microsoft.Extensions.Logging;
+using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
 
@@ -8,11 +9,13 @@ namespace SchoolNewspaperBlazorApp.Service
     {
         private readonly IRoleRepository _roleRepository;
         private readonly IPermissionService _permissionService;
+        private readonly ILogger<RoleService> _logger;
 
-        public RoleService(IRoleRepository roleRepository, IPermissionService permissionService)
+        public RoleService(IRoleRepository roleRepository, IPermissionService permissionService, ILogger<RoleService> logger)
         {
             _roleRepository = roleRepository;
             _permissionService = permissionService;
+            _logger = logger;
         }
 
         public Task<Dictionary<int, string>> GetAllRolesAsync()

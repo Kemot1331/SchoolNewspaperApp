@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
@@ -9,10 +10,12 @@ namespace SchoolNewspaperBlazorApp.Repository;
 public class PermissionRepository : IPermissionRepository
 {
     private readonly IDbContextFactory<NewspaperDbContext> _factory;
+    private readonly ILogger<PermissionRepository> _logger;
 
-    public PermissionRepository(IDbContextFactory<NewspaperDbContext> factory)
+    public PermissionRepository(IDbContextFactory<NewspaperDbContext> factory, ILogger<PermissionRepository> logger)
     {
         _factory = factory;
+        _logger = logger;
     }
 
     public async Task<bool> HasPermissionAsync(ClaimsPrincipal principal, EnumPermissions permission)

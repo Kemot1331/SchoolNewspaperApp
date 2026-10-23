@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
@@ -7,10 +8,12 @@ namespace SchoolNewspaperBlazorApp.Repository
     public class FileRepository : IFileRepository
     {
         private readonly IDbContextFactory<NewspaperDbContext> _factory;
+        private readonly ILogger<FileRepository> _logger;
 
-        public FileRepository(IDbContextFactory<NewspaperDbContext> factory)
+        public FileRepository(IDbContextFactory<NewspaperDbContext> factory, ILogger<FileRepository> logger)
         {
             _factory = factory;
+            _logger = logger;
         }
 
         public async Task<int> GetLastFileId()

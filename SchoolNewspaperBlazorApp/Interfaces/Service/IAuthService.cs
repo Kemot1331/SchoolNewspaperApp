@@ -1,4 +1,6 @@
-﻿namespace SchoolNewspaperBlazorApp.Interfaces.Service
+﻿using SchoolNewspaperBlazorApp.Data;
+
+namespace SchoolNewspaperBlazorApp.Interfaces.Service
 {
     public interface IAuthService
     {
@@ -7,5 +9,7 @@
         Task<int> CheckIfRegisteredAsync(string login, string password);
         Task<string> GetFullNameAsync(int userId);
         Task DeleteUserByIdAsync(int id);
+        Task<UserDetails?> GetUserDetailsAsync(int id);
+        Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? newPassword);
     }
 }

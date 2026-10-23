@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
 
@@ -7,10 +8,12 @@ namespace SchoolNewspaperBlazorApp.Repository
     public class RoleRepository : IRoleRepository
     {
         private readonly IDbContextFactory<NewspaperDbContext> _factory;
+        private readonly ILogger<RoleRepository> _logger;
 
-        public RoleRepository(IDbContextFactory<NewspaperDbContext> factory)
+        public RoleRepository(IDbContextFactory<NewspaperDbContext> factory, ILogger<RoleRepository> logger)
         {
             _factory = factory;
+            _logger = logger;
         }
 
         public async Task<Dictionary<int, string>> GetAllRolesAsync()
