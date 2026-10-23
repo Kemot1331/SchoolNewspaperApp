@@ -3,7 +3,7 @@
 @inject IAuthService authService
 @inject ToastService toastService
 
-
+<ToastHost></ToastHost>
 <form @onsubmit="AddUserAsync" @onsubmit:preventDefault>
     <label class="form-label">Login</label>
     <input @bind="Login" class="form-control mb-3" placeholder="Login" autocomplete="off" />

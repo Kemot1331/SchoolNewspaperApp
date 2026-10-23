@@ -6,7 +6,7 @@ public enum ArticleType
     Substitute,
     Events,
     Competitions,
-    Admisions,
+    Admissions,
     Exams,
     StudentCouncil
 }
@@ -19,7 +19,7 @@ public static class EventsTypesExtensions
         ArticleType.Substitute => "Zastępstwa",
         ArticleType.Events => "Wydarzenia",
         ArticleType.Competitions => "Zawody",
-        ArticleType.Admisions => "Rekrutacja",
+        ArticleType.Admissions => "Rekrutacja",
         ArticleType.Exams => "Egzaminy",
         ArticleType.StudentCouncil => "Samorząd uczniowski",
         _ => type.ToString()

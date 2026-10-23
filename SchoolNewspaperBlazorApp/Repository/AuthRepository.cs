@@ -26,6 +26,19 @@
                 return await context.User.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
             }
 
+            public async Task DeleteUserByIdAsync(int id)
+            {
+                await using var context = await _factory.CreateDbContextAsync();
+                var user = await context.User.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    throw new Exception("Konto nie istnieje");
+                }
+                context.User.Remove(user);
+                await context.SaveChangesAsync();
+            }
+
             public async Task AddUserAsync(User user)
             {
                 await using var context = await _factory.CreateDbContextAsync();

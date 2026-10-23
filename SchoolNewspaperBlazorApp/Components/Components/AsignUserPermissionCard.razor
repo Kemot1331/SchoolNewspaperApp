@@ -1,7 +1,10 @@
 ﻿@using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
 @inject IAuthService authService
 @inject IPermissionService permissionService
+@inject ToastService toastService
+
 
 @if (!string.IsNullOrEmpty(message))
 {
@@ -20,6 +23,7 @@
 else
 {
     <div class="article-grid">
+        <ToastHost></ToastHost>
         @foreach (var user in Users)
         {
             var isOpen = expandedUserId == user.Key;
@@ -38,7 +42,7 @@ else
                                            type="checkbox"
                                            id="@($"permission-{user.Key}-{permission}")"
                                            checked="@selected.Contains(permission)"
-                                           @onchange="e => SetPermission(permission, e)" />
+                                           @onchange="e => SetPermission(permission, e)"/>
                                     <label class="form-check-label"
                                            for="@($"permission-{user.Key}-{permission}")">
                                         @PermissionLabel(permission)
@@ -47,14 +51,30 @@ else
                             }
                         </div>
 
-                        <div class="d-flex gap-2">
+                        <div class="d-flex flex-wrap gap-2">
                             <button type="button" class="btn btn-primary" disabled="@saving" @onclick="SaveAsync">
                                 Zapisz
                             </button>
                             <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUserAsync(user.Key)">
                                 Anuluj
                             </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => confirmDeleteId = user.Key">
+                                Usuń użytkownika
+                            </button>
                         </div>
+
+                        @if (confirmDeleteId == user.Key)
+                        {
+                            <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                                <span class="small">Na pewno usunąć to konto?</span>
+                                <button type="button" class="btn btn-sm btn-danger" disabled="@saving" @onclick="() => DeleteUserAsync(user.Key)">
+                                    Tak, usuń
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => confirmDeleteId = null">
+                                    Nie
+                                </button>
+                            </div>
+                        }
                     }
                     else
                     {
@@ -76,6 +96,7 @@ else
     private Dictionary<int, string> Users = new();
     private readonly Dictionary<int, string> fullNames = new();
     private int? expandedUserId;
+    private int? confirmDeleteId;
     private HashSet<EnumPermissions> selected = new();
     private bool saving;
     private string? message;
@@ -103,6 +124,7 @@ else
     {
         message = null;
         error = null;
+        confirmDeleteId = null;
 
         if (expandedUserId == userId)
         {
@@ -146,14 +168,51 @@ else
         }
         catch (UnauthorizedAccessException)
         {
-            error = "Nie masz uprawnień do zmiany uprawnień użytkowników.";
+            toastService.Error("Nie masz uprawnień do zmiany uprawnień użytkowników.");
         }
         catch (Exception)
         {
-            error = "Nie udało się zapisać uprawnień.";
+            toastService.Error("Nie udało się zapisać uprawnień.");
         }
         finally
         {
+            saving = false;
+        }
+    }
+
+    private async Task DeleteUserAsync(int userId)
+    {
+        saving = true;
+        message = null;
+        error = null;
+
+        try
+        {
+            var name = DisplayName(userId, Users.GetValueOrDefault(userId, ""));
+
+            await authService.DeleteUserByIdAsync(userId);
+
+            Users.Remove(userId);
+            fullNames.Remove(userId);
+            expandedUserId = null;
+            toastService.Success($"Usunięto użytkownika {name}.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do usuwania użytkowników.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // własne konto lub konto administratora
+            toastService.Error(ex.Message);
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się usunąć użytkownika.");
+        }
+        finally
+        {
+            confirmDeleteId = null;
             saving = false;
         }
     }

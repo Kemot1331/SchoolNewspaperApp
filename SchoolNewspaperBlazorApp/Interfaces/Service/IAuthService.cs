@@ -6,5 +6,6 @@
         Task<Dictionary<int, string>> GetAllUsersAsync();
         Task<int> CheckIfRegisteredAsync(string login, string password);
         Task<string> GetFullNameAsync(int userId);
+        Task DeleteUserByIdAsync(int id);
     }
 }

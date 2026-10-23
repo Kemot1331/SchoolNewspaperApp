@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
@@ -10,11 +12,19 @@ namespace SchoolNewspaperBlazorApp.Service
     {
         private readonly IAuthRepository _authRepository;
         private readonly IPermissionRepository _permissionRepository;
+        private readonly IPermissionService _permissionService;
+        private readonly AuthenticationStateProvider _authenticationStateProvider;
 
-        public AuthService(IAuthRepository authRepository,  IPermissionRepository permissionRepository)
+        public AuthService(
+            IAuthRepository authRepository,
+            IPermissionRepository permissionRepository,
+            IPermissionService permissionService,
+            AuthenticationStateProvider authenticationStateProvider)
         {
             _authRepository = authRepository;
             _permissionRepository = permissionRepository;
+            _permissionService = permissionService;
+            _authenticationStateProvider = authenticationStateProvider;
         }
         
         public async Task<Dictionary<int, string>> GetAllUsersAsync()
@@ -64,7 +74,35 @@ namespace SchoolNewspaperBlazorApp.Service
         public async Task<string> GetFullNameAsync(int userId)
         {
             var user = await _authRepository.GetUserByIdAsync(userId);
-            return user.FirstName + " " + user.LastName;
+            return user == null ? "" : $"{user.FirstName} {user.LastName}".Trim();
+        }
+
+        public async Task DeleteUserByIdAsync(int id)
+        {
+            // 1. Tylko ManageUser lub Master – sprawdzamy to tutaj, a nie tylko w interfejsie
+            var allowed = await _permissionService.HasPermissionAsync(EnumPermissions.ManageUser)
+                          || await _permissionService.HasPermissionAsync(EnumPermissions.Master);
+            if (!allowed)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            // 2. Nie usuwamy własnego konta
+            var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var currentId = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (currentId == id.ToString())
+            {
+                throw new InvalidOperationException("Nie możesz usunąć własnego konta.");
+            }
+
+            // 3. Nie usuwamy konta administratora (Master)
+            var permissions = await _permissionRepository.GetUserPermissionsAsync(id);
+            if (permissions.Contains(EnumPermissions.Master))
+            {
+                throw new InvalidOperationException("Nie można usunąć konta administratora.");
+            }
+
+            await _authRepository.DeleteUserByIdAsync(id);
         }
     }
 }
