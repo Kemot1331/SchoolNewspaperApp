@@ -10,6 +10,12 @@
 
     <label class="form-label">E-mail</label>
     <input @bind="Email" type="email" class="form-control mb-3" placeholder="E-Mail" autocomplete="off" />
+    
+    <label class="form-label">Imię:</label>
+    <input @bind="FirstName" type="text" class="form-control mb-3" placeholder="Imię" autocomplete="off" />
+    
+    <label class="form-label">Nazwisko:</label>
+    <input @bind="LastName" type="text" class="form-control mb-3" placeholder="Nazwisko" autocomplete="off" />
 
     <label class="form-label">Hasło</label>
     <input @bind="Password" type="password" class="form-control mb-4" placeholder="Hasło" autocomplete="new-password" />
@@ -22,6 +28,8 @@
     private string Login { get; set; } = "";
     private string Password { get; set; } = "";
     private string Email { get; set; } = "";
+    private string FirstName { get; set; } = "";
+    private string LastName { get; set; } = "";
 
     private async Task AddUserAsync()
     {
@@ -33,12 +41,14 @@
 
         try
         {
-            await authService.AddUserAsync(Login.Trim(), Password, Email.Trim());
+            await authService.AddUserAsync(Login.Trim(), Password, Email.Trim(), FirstName.Trim(), LastName.Trim());
             toastService.Success("Dodano użytkownika.");
 
             Login = "";
             Email = "";
             Password = "";
+            FirstName = "";
+            LastName = "";
         }
         catch (Exception)
         {

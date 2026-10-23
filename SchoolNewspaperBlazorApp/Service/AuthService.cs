@@ -22,7 +22,7 @@ namespace SchoolNewspaperBlazorApp.Service
             return await _authRepository.GetAllUsersAsync();
         }
 
-        public async Task AddUserAsync(string login, string password, string email)
+        public async Task AddUserAsync(string login, string password, string email, string firstName, string lastName)
         {
             var hasher = new PasswordHasher<string>();
             string passwordHash = hasher.HashPassword(null!, password);
@@ -31,7 +31,9 @@ namespace SchoolNewspaperBlazorApp.Service
                 Login = login,
                 Password = passwordHash,
                 Email = email,
-                RegisterDate = DateTime.Now
+                RegisterDate = DateTime.Now,
+                FirstName = firstName.Trim(),
+                LastName = lastName.Trim()
             };
 
             await _authRepository.AddUserAsync(user);
@@ -57,6 +59,12 @@ namespace SchoolNewspaperBlazorApp.Service
             {
                 return 0;
             }
+        }
+
+        public async Task<string> GetFullNameAsync(int userId)
+        {
+            var user = await _authRepository.GetUserByIdAsync(userId);
+            return user.FirstName + " " + user.LastName;
         }
     }
 }

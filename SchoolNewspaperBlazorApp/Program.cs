@@ -73,11 +73,20 @@ namespace SchoolNewspaperBlazorApp
                 {
                     return Results.Redirect("/");
                 }
+
+                // imię i nazwisko pokazujemy w nagłówku obok "Wyloguj się"
+                var fullName = await authService.GetFullNameAsync(userId);
+
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                    new Claim(ClaimTypes.Name,email),
+                    new Claim(ClaimTypes.Name,email)
                 };
+                if (!string.IsNullOrWhiteSpace(fullName))
+                {
+                    claims.Add(new Claim("FullName", fullName));
+                }
+
                 var identity = new ClaimsIdentity(
                     claims,
                     CookieAuthenticationDefaults.AuthenticationScheme);

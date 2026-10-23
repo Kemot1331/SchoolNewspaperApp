@@ -9,6 +9,8 @@
         string login = "admin";
         string password = "admin";
         string email = "admin@admin.pl";
-        await authService.AddUserAsync(login, password, email);
+        string firstName = "Jan";
+        string lastName = "Kowalski";
+        await authService.AddUserAsync(login, password, email,  firstName, lastName);
     }
 }
