@@ -64,10 +64,6 @@
         <label class="form-label">Treść ogłoszenia</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Treść ogłoszenia..." style="resize: none"></textarea>
-
-        <label class="form-label">Autor ogłoszenia</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Imię i nazwisko" />
         break;
 
     case ArticleType.Substitute:
@@ -78,10 +74,6 @@
         <label class="form-label">Szczegóły zastępstwa</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Klasa, lekcja, nauczyciel..." style="resize: none"></textarea>
-
-        <label class="form-label">Osoba dodająca</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Imię i nazwisko" />
         break;
 
     case ArticleType.Events:
@@ -92,10 +84,6 @@
         <label class="form-label">Opis wydarzenia</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Opis wydarzenia..." style="resize: none"></textarea>
-
-        <label class="form-label">Organizator</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Nazwa organizatora..." />
         break;
 
     case ArticleType.Competitions:
@@ -106,10 +94,6 @@
         <label class="form-label">Opis zawodów i wyniki</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Opisz zawody i wyniki..." style="resize: none"></textarea>
-
-        <label class="form-label">Organizator zawodów</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Organizator..." />
         break;
 
     case ArticleType.Admissions:
@@ -120,10 +104,6 @@
         <label class="form-label">Informacje o rekrutacji</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Terminy, zasady, wymagania..." style="resize: none"></textarea>
-
-        <label class="form-label">Osoba odpowiedzialna</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Imię i nazwisko" />
         break;
 
     case ArticleType.Exams:
@@ -134,10 +114,6 @@
         <label class="form-label">Informacje o egzaminie</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Terminy i ważne informacje..." style="resize: none"></textarea>
-
-        <label class="form-label">Osoba odpowiedzialna</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Imię i nazwisko" />
         break;
 
     case ArticleType.StudentCouncil:
@@ -148,10 +124,6 @@
         <label class="form-label">Treść informacji</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Informacja od samorządu..." style="resize: none"></textarea>
-
-        <label class="form-label">Przedstawiciel samorządu</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Imię i nazwisko" />
         break;
 
     default:
@@ -162,10 +134,6 @@
         <label class="form-label">Treść</label>
         <textarea @bind="text" class="form-control mb-3"
                   rows="6" placeholder="Treść artykułu..." style="resize: none"></textarea>
-
-        <label class="form-label">Autor</label>
-        <input @bind="author" class="form-control mb-3"
-               placeholder="Imię i nazwisko" />
         break;
 }
 
@@ -198,7 +166,6 @@
 
     private string title = "";
     private string text = "";
-    private string author = "";
     private ArticleType? eventType;
     private int formKey;
 
@@ -208,7 +175,6 @@
         {
             title = Article.Title;
             text = Article.Text;
-            author = Article.Author;
             eventType = Article.EventsType;
         }
     }
@@ -232,20 +198,19 @@
                     fileId = await fileService.UploadImage(photos[0].File);
                 }
 
-                await articleService.UpdateArticleByIdAsync(Article.Id, title, text, author, fileId, eventType);
+                await articleService.UpdateArticleByIdAsync(Article.Id, title, text, fileId, eventType);
                 toastService.Success("Artykuł został zapisany.");
                 ClearPhotos();
             }
             else
             {
                 var fileIds = await fileService.UploadImagesAsync(photos.Select(p => p.File));
-                await articleService.AddArticleAsync(title, text, author, fileIds, eventType);
+                await articleService.AddArticleAsync(title, text, fileIds, eventType);
                 toastService.Success("Artykuł został dodany.");
 
                 // czyścimy formularz, żeby nie dodać tego samego artykułu dwa razy
                 title = "";
                 text = "";
-                author = "";
                 eventType = null;
                 ClearPhotos();
             }

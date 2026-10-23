@@ -2,19 +2,8 @@
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 @using SchoolNewspaperBlazorApp.Service
 @inject IAuthService authService
-@inject IPermissionService permissionService
+@inject IRoleService roleService
 @inject ToastService toastService
-
-
-@if (!string.IsNullOrEmpty(message))
-{
-    <p class="form-status" role="status">@message</p>
-}
-
-@if (!string.IsNullOrEmpty(error))
-{
-    <p class="form-error" role="alert">@error</p>
-}
 
 @if (Users.Count == 0)
 {
@@ -23,63 +12,47 @@
 else
 {
     <div class="article-grid">
-        <ToastHost></ToastHost>
         @foreach (var user in Users)
         {
             var isOpen = expandedUserId == user.Key;
+            var currentRole = roles.GetValueOrDefault(user.Key);
+            var isMaster = Role.IsMasterName(currentRole);
 
             <div class="article-card" @key="user.Key">
                 <div class="article-card__body">
                     <h5 class="article-card__title">@DisplayName(user.Key, user.Value)</h5>
+                    <p class="article-card__text">
+                        Rola: @(string.IsNullOrWhiteSpace(currentRole) ? "brak" : currentRole)
+                    </p>
 
-                    @if (isOpen)
+                    @if (isMaster)
                     {
-                        <div class="mb-3">
-                            @foreach (var permission in Editable)
-                            {
-                                <div class="form-check mb-2" @key="permission">
-                                    <input class="form-check-input"
-                                           type="checkbox"
-                                           id="@($"permission-{user.Key}-{permission}")"
-                                           checked="@selected.Contains(permission)"
-                                           @onchange="e => SetPermission(permission, e)"/>
-                                    <label class="form-check-label"
-                                           for="@($"permission-{user.Key}-{permission}")">
-                                        @PermissionLabel(permission)
-                                    </label>
-                                </div>
-                            }
-                        </div>
+                        <p class="small">Rola Master jest chroniona – nie można jej zmienić z panelu.</p>
+                    }
+                    else if (isOpen)
+                    {
+                        <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
+                            <label class="form-label">Nazwa roli</label>
+                            <input @bind="roleName"
+                                   class="form-control mb-3"
+                                   maxlength="@Role.MaxNameLength"
+                                   placeholder="Np. Redaktor naczelny"
+                                   autocomplete="off" />
 
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-primary" disabled="@saving" @onclick="SaveAsync">
-                                Zapisz
-                            </button>
-                            <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUserAsync(user.Key)">
-                                Anuluj
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => confirmDeleteId = user.Key">
-                                Usuń użytkownika
-                            </button>
-                        </div>
-
-                        @if (confirmDeleteId == user.Key)
-                        {
-                            <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                                <span class="small">Na pewno usunąć to konto?</span>
-                                <button type="button" class="btn btn-sm btn-danger" disabled="@saving" @onclick="() => DeleteUserAsync(user.Key)">
-                                    Tak, usuń
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-primary" disabled="@saving">
+                                    Zapisz
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => confirmDeleteId = null">
-                                    Nie
+                                <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUser(user.Key)">
+                                    Anuluj
                                 </button>
                             </div>
-                        }
+                        </form>
                     }
                     else
                     {
-                        <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUserAsync(user.Key)">
-                            Edytuj uprawnienia
+                        <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUser(user.Key)">
+                            @(string.IsNullOrWhiteSpace(currentRole) ? "Nadaj rolę" : "Zmień rolę")
                         </button>
                     }
                 </div>
@@ -89,28 +62,23 @@ else
 }
 
 @code {
-    // Master celowo pomijamy – tego uprawnienia nie nadaje się z panelu
-    private static readonly EnumPermissions[] Editable =
-        Enum.GetValues<EnumPermissions>().Where(p => p != EnumPermissions.Master).ToArray();
-
     private Dictionary<int, string> Users = new();
     private readonly Dictionary<int, string> fullNames = new();
+    private Dictionary<int, string> roles = new();
     private int? expandedUserId;
-    private int? confirmDeleteId;
-    private HashSet<EnumPermissions> selected = new();
+    private string roleName = "";
     private bool saving;
-    private string? message;
-    private string? error;
 
     protected override async Task OnInitializedAsync()
     {
         Users = await authService.GetAllUsersAsync();
 
-        // imię i nazwisko każdego użytkownika (jedno proste zapytanie na konto)
         foreach (var id in Users.Keys)
         {
             fullNames[id] = await authService.GetFullNameAsync(id);
         }
+
+        roles = await roleService.GetAllRolesAsync();
     }
 
     // "Imię Nazwisko (e-mail)"; dla konta bez imienia i nazwiska sam e-mail
@@ -120,33 +88,16 @@ else
         return string.IsNullOrWhiteSpace(fullName) ? email : $"{fullName} ({email})";
     }
 
-    private async Task ToggleUserAsync(int userId)
+    private void ToggleUser(int userId)
     {
-        message = null;
-        error = null;
-        confirmDeleteId = null;
-
         if (expandedUserId == userId)
         {
             expandedUserId = null;
             return;
         }
 
-        var current = await permissionService.GetUserPermissionsAsync(userId);
-        selected = current.ToHashSet();
         expandedUserId = userId;
-    }
-
-    private void SetPermission(EnumPermissions permission, ChangeEventArgs e)
-    {
-        if (e.Value is true)
-        {
-            selected.Add(permission);
-        }
-        else
-        {
-            selected.Remove(permission);
-        }
+        roleName = roles.GetValueOrDefault(userId, "");
     }
 
     private async Task SaveAsync()
@@ -157,73 +108,29 @@ else
         }
 
         saving = true;
-        message = null;
-        error = null;
 
         try
         {
-            await permissionService.SetUserPermissionsAsync(userId, selected);
-            message = $"Zapisano uprawnienia użytkownika {DisplayName(userId, Users[userId])}.";
+            await roleService.SetRoleAsync(userId, roleName);
+            roles[userId] = roleName.Trim();
+            toastService.Success($"Zapisano rolę użytkownika {DisplayName(userId, Users[userId])}.");
             expandedUserId = null;
         }
         catch (UnauthorizedAccessException)
         {
-            toastService.Error("Nie masz uprawnień do zmiany uprawnień użytkowników.");
-        }
-        catch (Exception)
-        {
-            toastService.Error("Nie udało się zapisać uprawnień.");
-        }
-        finally
-        {
-            saving = false;
-        }
-    }
-
-    private async Task DeleteUserAsync(int userId)
-    {
-        saving = true;
-        message = null;
-        error = null;
-
-        try
-        {
-            var name = DisplayName(userId, Users.GetValueOrDefault(userId, ""));
-
-            await authService.DeleteUserByIdAsync(userId);
-
-            Users.Remove(userId);
-            fullNames.Remove(userId);
-            expandedUserId = null;
-            toastService.Success($"Usunięto użytkownika {name}.");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            toastService.Error("Nie masz uprawnień do usuwania użytkowników.");
+            toastService.Error("Nie masz uprawnień do nadawania ról.");
         }
         catch (InvalidOperationException ex)
         {
-            // własne konto lub konto administratora
             toastService.Error(ex.Message);
         }
         catch (Exception)
         {
-            toastService.Error("Nie udało się usunąć użytkownika.");
+            toastService.Error("Nie udało się zapisać roli.");
         }
         finally
         {
-            confirmDeleteId = null;
             saving = false;
         }
     }
-
-    private static string PermissionLabel(EnumPermissions permission) => permission switch
-    {
-        EnumPermissions.AddArticle => "Dodawanie artykułów",
-        EnumPermissions.EditArticle => "Edycja artykułów",
-        EnumPermissions.DeleteArticle => "Usuwanie artykułów",
-        EnumPermissions.AddUser => "Dodawanie użytkowników",
-        EnumPermissions.ManageUser => "Zarządzanie użytkownikami",
-        _ => permission.ToString()
-    };
 }

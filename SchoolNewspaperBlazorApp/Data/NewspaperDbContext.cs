@@ -12,6 +12,7 @@ namespace SchoolNewspaperBlazorApp.Data
         public DbSet<UserPermission> UserPermissions { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<ArticleImage> Images { get; set; }
+        public DbSet<Role> Roles { get; set; }
         protected override void OnModelCreating(ModelBuilder mb)
         {
             base.OnModelCreating(mb);
@@ -29,6 +30,24 @@ namespace SchoolNewspaperBlazorApp.Data
                 .HasOne(x => x.Permission)
                 .WithMany(x => x.Permissions)
                 .HasForeignKey(x => x.PermissionId);
+
+            // User 1:1 Role (klucz obcy UserId leży w Role; usunięcie użytkownika usuwa jego rolę)
+            mb.Entity<Role>()
+                .HasOne(r => r.User)
+                .WithOne(u => u.Role)
+                .HasForeignKey<Role>(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            mb.Entity<Role>()
+                .Property(r => r.RoleName)
+                .IsRequired()
+                .HasMaxLength(Role.MaxNameLength);
+
+            // Artykuł -> twórca; po usunięciu konta artykuł zostaje (UserId = NULL)
+            mb.Entity<Article>()
+                .HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 

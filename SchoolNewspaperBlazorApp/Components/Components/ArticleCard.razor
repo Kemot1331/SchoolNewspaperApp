@@ -15,7 +15,7 @@
                     <h5 class="article-card__title">@article.Title</h5>
                     <p class="article-card__text">@article.Text</p>
                     <div class="article-card__footer">
-                        <span class="article-card__author">@article.Author</span>
+                        <span class="article-card__author">@article.AuthorDisplay</span>
                         @if (CanDelete)
                         {
                             <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
@@ -42,7 +42,7 @@
                     <h5 class="article-card__title">@article.Title</h5>
                     <p class="article-card__text">@article.Text</p>
                     <div class="article-card__footer">
-                        <span class="article-card__author">@article.Author</span>
+                        <span class="article-card__author">@article.AuthorDisplay</span>
                         <span class="article-card__more">Czytaj więcej →</span>
                     </div>
                 </div>

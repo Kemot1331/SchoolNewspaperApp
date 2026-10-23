@@ -136,6 +136,28 @@
                 </button>
             }
 
+            @if (canManageUsers)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(6)">
+
+                    <span class="admin-action__icon">★</span>
+
+                    <span class="admin-action__number">05</span>
+
+                    <strong>Nadaj rolę</strong>
+
+                    <span class="admin-action__description">
+                        Przypisz użytkownikom role widoczne przy ich artykułach.
+                    </span>
+
+                    <span class="admin-action__footer">
+                        Nadaj rolę <span>→</span>
+                    </span>
+                </button>
+            }
+
         </div>
 
         <section class="admin-section">
@@ -173,6 +195,10 @@
                 else if (view == 3)
                 {
                     <span>Dodawanie użytkownika</span>
+                }
+                else if (view == 6)
+                {
+                    <span>Nadawanie ról</span>
                 }
             </div>
         </div>
@@ -277,6 +303,10 @@
         {
             <AsignUserPermissionCard></AsignUserPermissionCard>
         }
+        else if (view == 6)
+        {
+            <AssignRoleCard></AssignRoleCard>
+        }
     }
 
 </div>
@@ -317,6 +347,7 @@
         3 => canAddUser,
         4 => canEditArticle,
         5 => canManageUsers,
+        6 => canManageUsers,
         _ => false
     };
 

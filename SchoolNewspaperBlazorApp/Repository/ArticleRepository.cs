@@ -23,7 +23,11 @@ namespace SchoolNewspaperBlazorApp.Repository
         public async Task<List<Article>> GetAllArticlesAsync()
         {
             await using var context = await _factory.CreateDbContextAsync();
-            return await context.Articles.AsNoTracking().ToListAsync();
+            return await context.Articles
+                .AsNoTracking()
+                .Include(a => a.User)
+                    .ThenInclude(u => u!.Role)
+                .ToListAsync();
         }
 
         public async Task<Article> GetArticleByIdAsync(int id)
@@ -31,6 +35,8 @@ namespace SchoolNewspaperBlazorApp.Repository
             await using var context = await _factory.CreateDbContextAsync();
             var article = await context.Articles
                 .Include(a => a.Images)
+                .Include(a => a.User)
+                    .ThenInclude(u => u!.Role)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (article == null)
@@ -70,7 +76,6 @@ namespace SchoolNewspaperBlazorApp.Repository
             }
             
             articleById.Title = newArticle.Title;
-            articleById.Author = newArticle.Author;
             articleById.Text = newArticle.Text;
             articleById.EventsType = newArticle.EventsType;
                 

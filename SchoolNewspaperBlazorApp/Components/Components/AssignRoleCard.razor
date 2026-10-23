@@ -1,0 +1,136 @@
+﻿@using SchoolNewspaperBlazorApp.Data
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
+@inject IAuthService authService
+@inject IRoleService roleService
+@inject ToastService toastService
+
+@if (Users.Count == 0)
+{
+    <p class="empty-state">Nie ma jeszcze żadnych użytkowników.</p>
+}
+else
+{
+    <div class="article-grid">
+        @foreach (var user in Users)
+        {
+            var isOpen = expandedUserId == user.Key;
+            var currentRole = roles.GetValueOrDefault(user.Key);
+            var isMaster = Role.IsMasterName(currentRole);
+
+            <div class="article-card" @key="user.Key">
+                <div class="article-card__body">
+                    <h5 class="article-card__title">@DisplayName(user.Key, user.Value)</h5>
+                    <p class="article-card__text">
+                        Rola: @(string.IsNullOrWhiteSpace(currentRole) ? "brak" : currentRole)
+                    </p>
+
+                    @if (isMaster)
+                    {
+                        <p class="small">Rola Master jest chroniona – nie można jej zmienić z panelu.</p>
+                    }
+                    else if (isOpen)
+                    {
+                        <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
+                            <label class="form-label">Nazwa roli</label>
+                            <input @bind="roleName"
+                                   class="form-control mb-3"
+                                   maxlength="@Role.MaxNameLength"
+                                   placeholder="Np. Redaktor naczelny"
+                                   autocomplete="off" />
+
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-primary" disabled="@saving">
+                                    Zapisz
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUser(user.Key)">
+                                    Anuluj
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-primary" @onclick="() => ToggleUser(user.Key)">
+                            @(string.IsNullOrWhiteSpace(currentRole) ? "Nadaj rolę" : "Zmień rolę")
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private Dictionary<int, string> Users = new();
+    private readonly Dictionary<int, string> fullNames = new();
+    private Dictionary<int, string> roles = new();
+    private int? expandedUserId;
+    private string roleName = "";
+    private bool saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Users = await authService.GetAllUsersAsync();
+
+        foreach (var id in Users.Keys)
+        {
+            fullNames[id] = await authService.GetFullNameAsync(id);
+        }
+
+        roles = await roleService.GetAllRolesAsync();
+    }
+
+    // "Imię Nazwisko (e-mail)"; dla konta bez imienia i nazwiska sam e-mail
+    private string DisplayName(int id, string email)
+    {
+        var fullName = fullNames.GetValueOrDefault(id, "");
+        return string.IsNullOrWhiteSpace(fullName) ? email : $"{fullName} ({email})";
+    }
+
+    private void ToggleUser(int userId)
+    {
+        if (expandedUserId == userId)
+        {
+            expandedUserId = null;
+            return;
+        }
+
+        expandedUserId = userId;
+        roleName = roles.GetValueOrDefault(userId, "");
+    }
+
+    private async Task SaveAsync()
+    {
+        if (expandedUserId is not int userId)
+        {
+            return;
+        }
+
+        saving = true;
+
+        try
+        {
+            await roleService.SetRoleAsync(userId, roleName);
+            roles[userId] = roleName.Trim();
+            toastService.Success($"Zapisano rolę użytkownika {DisplayName(userId, Users[userId])}.");
+            expandedUserId = null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do nadawania ról.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            toastService.Error(ex.Message);
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się zapisać roli.");
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}

@@ -12,17 +12,20 @@ namespace SchoolNewspaperBlazorApp.Service
     {
         private readonly IAuthRepository _authRepository;
         private readonly IPermissionRepository _permissionRepository;
+        private readonly IRoleRepository _roleRepository;
         private readonly IPermissionService _permissionService;
         private readonly AuthenticationStateProvider _authenticationStateProvider;
 
         public AuthService(
             IAuthRepository authRepository,
             IPermissionRepository permissionRepository,
+            IRoleRepository roleRepository,
             IPermissionService permissionService,
             AuthenticationStateProvider authenticationStateProvider)
         {
             _authRepository = authRepository;
             _permissionRepository = permissionRepository;
+            _roleRepository = roleRepository;
             _permissionService = permissionService;
             _authenticationStateProvider = authenticationStateProvider;
         }
@@ -97,7 +100,8 @@ namespace SchoolNewspaperBlazorApp.Service
 
             // 3. Nie usuwamy konta administratora (Master)
             var permissions = await _permissionRepository.GetUserPermissionsAsync(id);
-            if (permissions.Contains(EnumPermissions.Master))
+            var role = await _roleRepository.GetRoleByUserIdAsync(id);
+            if (permissions.Contains(EnumPermissions.Master) || Role.IsMasterName(role?.RoleName))
             {
                 throw new InvalidOperationException("Nie można usunąć konta administratora.");
             }
