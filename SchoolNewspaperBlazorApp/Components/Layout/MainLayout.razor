@@ -1,7 +1,9 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using SchoolNewspaperBlazorApp.Service
+@using SchoolNewspaperBlazorApp.Interfaces.Service
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider asp;
+@inject IPermissionService permissionService
 
 <div class="site-shell">
     <header class="site-header">
@@ -76,7 +78,7 @@
                     <span class="site-status__dot"></span>
                     <span>Twoje szkolne centrum informacji</span>
                 </div>
-                @if (IsLoggedIn)
+                @if (CanOpenAdminPanel)
                 {
                     <NavLink class="admin-link" href="/adminPanel">
                         <span class="admin-link__icon">⚙</span>
@@ -128,6 +130,7 @@
 </div>
 @code{
     private bool IsLoggedIn;
+    private bool CanOpenAdminPanel;
     private string displayName = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -140,6 +143,9 @@
         {
             var fullName = user.FindFirst("FullName")?.Value;
             displayName = fullName ?? user.FindFirst("Name")?.Value;
+
+            // link do panelu tylko dla kont, które mają jakiekolwiek uprawnienie
+            CanOpenAdminPanel = await permissionService.HasAnyPermissionAsync();
         }
     }
 

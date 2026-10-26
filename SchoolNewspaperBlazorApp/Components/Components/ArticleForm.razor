@@ -6,7 +6,7 @@
 @inject ToastService toastService
     
 <div class="add-article-form">
-    <h1 class="add-article-form__title">Dodaj artykuł</h1>
+    <h1 class="add-article-form__title">@(IsEdit ? "Edytuj artykuł" : Texts.Heading)</h1>
 
     <label class="form-label">@(IsEdit ? "Nowe zdjęcie (zastąpi obecne)" : "Zdjęcia")</label>
     <InputFile @key="formKey"
@@ -46,7 +46,7 @@
     <form @onsubmit="SubmitForm" @onsubmit:preventDefault>
         
         <label class="form-label">Typ wydarzenia</label>
-        <select @bind="eventType" class="form-select mb-4">
+        <select value="@(eventType?.ToString() ?? "")" @onchange="OnTypeChanged" class="form-select mb-4">
             <option value="">Zwykły artykuł (bez typu)</option>
             @foreach (var t in Enum.GetValues<ArticleType>())
             {
@@ -54,92 +54,15 @@
             }
         </select>
         
-        @switch (eventType)
-{
-    case ArticleType.Announcements:
-        <label class="form-label">Tytuł ogłoszenia</label>
+        <label class="form-label">@Texts.TitleLabel</label>
         <input @bind="title" class="form-control mb-3"
-               placeholder="Tytuł ogłoszenia..." />
+               placeholder="@Texts.TitlePlaceholder" />
 
-        <label class="form-label">Treść ogłoszenia</label>
+        <label class="form-label">@Texts.TextLabel</label>
         <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Treść ogłoszenia..." style="resize: none"></textarea>
-        break;
+                  rows="6" placeholder="@Texts.TextPlaceholder" style="resize: none"></textarea>
 
-    case ArticleType.Substitute:
-        <label class="form-label">Informacje o zastępstwie</label>
-        <input @bind="title" class="form-control mb-3"
-               placeholder="Np. Zastępstwo z matematyki" />
-
-        <label class="form-label">Szczegóły zastępstwa</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Klasa, lekcja, nauczyciel..." style="resize: none"></textarea>
-        break;
-
-    case ArticleType.Events:
-        <label class="form-label">Nazwa wydarzenia</label>
-        <input @bind="title" class="form-control mb-3"
-               placeholder="Nazwa wydarzenia..." />
-
-        <label class="form-label">Opis wydarzenia</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Opis wydarzenia..." style="resize: none"></textarea>
-        break;
-
-    case ArticleType.Competitions:
-        <label class="form-label">Nazwa zawodów</label>
-        <input @bind="title" class="form-control mb-3"
-               placeholder="Nazwa zawodów..." />
-
-        <label class="form-label">Opis zawodów i wyniki</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Opisz zawody i wyniki..." style="resize: none"></textarea>
-        break;
-
-    case ArticleType.Admissions:
-        <label class="form-label">Tytuł informacji rekrutacyjnej</label>
-        <input @bind="title" class="form-control mb-3"
-               placeholder="Np. Rekrutacja na rok szkolny..." />
-
-        <label class="form-label">Informacje o rekrutacji</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Terminy, zasady, wymagania..." style="resize: none"></textarea>
-        break;
-
-    case ArticleType.Exams:
-        <label class="form-label">Nazwa egzaminu</label>
-        <input @bind="title" class="form-control mb-3"
-               placeholder="Np. Egzamin ósmoklasisty" />
-
-        <label class="form-label">Informacje o egzaminie</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Terminy i ważne informacje..." style="resize: none"></textarea>
-        break;
-
-    case ArticleType.StudentCouncil:
-        <label class="form-label">Tytuł informacji samorządu</label>
-        <input @bind="title" class="form-control mb-3"
-               placeholder="Tytuł informacji..." />
-
-        <label class="form-label">Treść informacji</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Informacja od samorządu..." style="resize: none"></textarea>
-        break;
-
-    default:
-        <label class="form-label">Tytuł</label>
-        <input @bind="title" class="form-control mb-3"
-               placeholder="Wpisz tytuł..." />
-
-        <label class="form-label">Treść</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="Treść artykułu..." style="resize: none"></textarea>
-        break;
-}
-
-
-
-        <button type="submit" class="btn btn-primary w-100">@(IsEdit ? "Zatwierdź edycje" : "Dodaj artykuł")</button>
+        <button type="submit" class="btn btn-primary w-100">@(IsEdit ? "Zatwierdź edycje" : Texts.Submit)</button>
 
         @if (IsEdit && CanDelete)
         {
@@ -168,6 +91,58 @@
     private string text = "";
     private ArticleType? eventType;
     private int formKey;
+
+    // Teksty formularza zależne od wybranej kategorii
+    private sealed record FormTexts(
+        string Heading,
+        string TitleLabel,
+        string TitlePlaceholder,
+        string TextLabel,
+        string TextPlaceholder,
+        string Submit);
+
+    private FormTexts Texts => GetTexts(eventType);
+
+    private static FormTexts GetTexts(ArticleType? type) => type switch
+    {
+        ArticleType.Announcements => new("Dodaj ogłoszenie",
+            "Tytuł ogłoszenia", "Tytuł ogłoszenia...",
+            "Treść ogłoszenia", "Treść ogłoszenia...",
+            "Dodaj ogłoszenie"),
+        ArticleType.Substitute => new("Dodaj zastępstwo",
+            "Informacje o zastępstwie", "Np. Zastępstwo z matematyki",
+            "Szczegóły zastępstwa", "Klasa, lekcja, nauczyciel...",
+            "Dodaj zastępstwo"),
+        ArticleType.Events => new("Dodaj wydarzenie",
+            "Nazwa wydarzenia", "Nazwa wydarzenia...",
+            "Opis wydarzenia", "Opis wydarzenia...",
+            "Dodaj wydarzenie"),
+        ArticleType.Competitions => new("Dodaj zawody",
+            "Nazwa zawodów", "Nazwa zawodów...",
+            "Opis zawodów i wyniki", "Opisz zawody i wyniki...",
+            "Dodaj zawody"),
+        ArticleType.Admissions => new("Dodaj informację o rekrutacji",
+            "Tytuł informacji rekrutacyjnej", "Np. Rekrutacja na rok szkolny...",
+            "Informacje o rekrutacji", "Terminy, zasady, wymagania...",
+            "Dodaj informację o rekrutacji"),
+        ArticleType.Exams => new("Dodaj egzamin",
+            "Nazwa egzaminu", "Np. Egzamin ósmoklasisty",
+            "Informacje o egzaminie", "Terminy i ważne informacje...",
+            "Dodaj egzamin"),
+        ArticleType.StudentCouncil => new("Dodaj informację samorządu",
+            "Tytuł informacji samorządu", "Tytuł informacji...",
+            "Treść informacji", "Informacja od samorządu...",
+            "Dodaj informację samorządu"),
+        _ => new("Dodaj artykuł",
+            "Tytuł", "Wpisz tytuł...",
+            "Treść", "Treść artykułu...",
+            "Dodaj artykuł")
+    };
+
+    private void OnTypeChanged(ChangeEventArgs e)
+    {
+        eventType = Enum.TryParse<ArticleType>(e.Value?.ToString(), out var parsed) ? parsed : null;
+    }
 
     protected override void OnParametersSet()
     {

@@ -35,7 +35,20 @@
         </div>
     </section>
 
-    @if (view == 0)
+    @if (!hasAnyPermission)
+    {
+        <section class="admin-content-panel">
+            <div class="admin-empty-state">
+                <span class="admin-empty-state__icon">♙</span>
+                <h3>Brak uprawnień</h3>
+                <p>
+                    Twoje konto nie ma jeszcze żadnych uprawnień.
+                    Skontaktuj się z administratorem gazetki.
+                </p>
+            </div>
+        </section>
+    }
+    else if (view == 0)
     {
         <div class="admin-section-heading">
             <div>
@@ -352,13 +365,16 @@
     private bool canAddUser;
     private bool canManageUsers;
 
+    private bool hasAnyPermission =>
+        canAddArticle || canEditArticle || canDeleteArticle || canAddUser || canManageUsers;
+
     protected override async Task OnInitializedAsync()
     {
         canAddArticle = await HasAsync(EnumPermissions.AddArticle);
         canEditArticle = await HasAsync(EnumPermissions.EditArticle);
         canDeleteArticle = await HasAsync(EnumPermissions.DeleteArticle);
         canAddUser = await HasAsync(EnumPermissions.AddUser);
-        canManageUsers = true;
+        canManageUsers = await HasAsync(EnumPermissions.ManageUser);
     }
 
     // Master ma dostęp do wszystkiego
