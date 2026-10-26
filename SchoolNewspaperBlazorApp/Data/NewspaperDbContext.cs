@@ -13,6 +13,11 @@ namespace SchoolNewspaperBlazorApp.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<ArticleImage> Images { get; set; }
         public DbSet<Role> Roles { get; set; }
+        public DbSet<SchoolClass> SchoolClasses { get; set; }
+        public DbSet<Teacher> Teachers { get; set; }
+        public DbSet<Room> Rooms { get; set; }
+        public DbSet<Subject> Subjects { get; set; }
+        public DbSet<Substitution> Substitutions { get; set; }
         protected override void OnModelCreating(ModelBuilder mb)
         {
             base.OnModelCreating(mb);
@@ -56,6 +61,57 @@ namespace SchoolNewspaperBlazorApp.Data
             // Rola i uprawnienia usuniętego użytkownika też przestają obowiązywać
             mb.Entity<Role>().HasQueryFilter(r => !r.User.IsDeleted);
             mb.Entity<UserPermission>().HasQueryFilter(up => !up.User.IsDeleted);
+
+            // Słowniki zastępstw: każdy ma swoją tabelę i unikalną nazwę
+            mb.Entity<SchoolClass>(e =>
+            {
+                e.ToTable("SchoolClasses");
+                e.Property(x => x.Name).IsRequired().HasMaxLength(DictionaryKind.Class.MaxNameLength());
+                e.HasIndex(x => x.Name).IsUnique();
+            });
+            mb.Entity<Teacher>(e =>
+            {
+                e.ToTable("Teachers");
+                e.Property(x => x.Name).IsRequired().HasMaxLength(DictionaryKind.Teacher.MaxNameLength());
+                e.HasIndex(x => x.Name).IsUnique();
+            });
+            mb.Entity<Room>(e =>
+            {
+                e.ToTable("Rooms");
+                e.Property(x => x.Name).IsRequired().HasMaxLength(DictionaryKind.Room.MaxNameLength());
+                e.HasIndex(x => x.Name).IsUnique();
+            });
+            mb.Entity<Subject>(e =>
+            {
+                e.ToTable("Subjects");
+                e.Property(x => x.Name).IsRequired().HasMaxLength(DictionaryKind.Subject.MaxNameLength());
+                e.HasIndex(x => x.Name).IsUnique();
+            });
+
+            // Zastępstwo -> słowniki. Restrict: wpisu słownika używanego w zastępstwach nie da się skasować
+            // (SubstitutionService i tak sprawdza to wcześniej i podaje czytelny komunikat).
+            mb.Entity<Substitution>(e =>
+            {
+                e.ToTable("Substitutions");
+                e.Property(x => x.Note).IsRequired().HasMaxLength(Substitution.MaxNoteLength);
+                e.HasIndex(x => x.Date);
+
+                e.HasOne(x => x.Class).WithMany().HasForeignKey(x => x.ClassId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.Subject).WithMany().HasForeignKey(x => x.SubjectId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.AbsentTeacher).WithMany().HasForeignKey(x => x.AbsentTeacherId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.SubstituteTeacher).WithMany().HasForeignKey(x => x.SubstituteTeacherId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.Room).WithMany().HasForeignKey(x => x.RoomId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                // po usunięciu konta zastępstwo zostaje (CreatedByUserId = NULL), tak jak artykuł
+                e.HasOne(x => x.CreatedBy).WithMany().HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                e.HasQueryFilter(x => !x.IsDeleted);
+            });
         }
     }
 

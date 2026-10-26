@@ -19,8 +19,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Data\Enum\" />
-  </ItemGroup>
-
 </Project>

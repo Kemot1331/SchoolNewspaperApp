@@ -1,0 +1,70 @@
+@using SchoolNewspaperBlazorApp.Data
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
+@inject ISubstitutionService substitutionService
+@inject ToastService toastService
+
+@if (editing != null)
+{
+    <SubstitutionForm IsEdit="true"
+                      Existing="editing"
+                      OnSaved="AfterSavedAsync"
+                      OnCancel="CancelEdit" />
+}
+else if (!loaded)
+{
+    <p class="empty-state">Wczytywanie…</p>
+}
+else
+{
+    <SubstitutionTable Items="items"
+                       ShowActions="true"
+                       OnEdit="StartEdit"
+                       OnDelete="DeleteAsync"
+                       EmptyText="Nie dodano jeszcze żadnych zastępstw." />
+}
+
+@code {
+    private List<Substitution> items = new();
+    private Substitution? editing;
+    private bool loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        items = await substitutionService.GetRecentAsync();
+        loaded = true;
+    }
+
+    private void StartEdit(Substitution substitution) => editing = substitution;
+
+    private void CancelEdit() => editing = null;
+
+    private async Task AfterSavedAsync()
+    {
+        editing = null;
+        await ReloadAsync();
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        try
+        {
+            await substitutionService.DeleteAsync(id);
+            toastService.Success("Zastępstwo zostało usunięte.");
+            await ReloadAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do usuwania zastępstw.");
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się usunąć zastępstwa.");
+        }
+    }
+}

@@ -1,0 +1,254 @@
+@using SchoolNewspaperBlazorApp.Data
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
+@inject ISubstitutionService substitutionService
+@inject IDictionaryService dictionaryService
+@inject ToastService toastService
+
+<div class="add-article-form subst-form">
+    <h1 class="add-article-form__title">@(IsEdit ? "Edytuj wpis" : "Dodaj zastępstwo")</h1>
+
+    @if (loaded && classes.Count == 0)
+    {
+        <p class="form-error" role="alert">
+            Słownik klas jest pusty. Dodaj klasy w sekcji „Klasy, nauczyciele, sale, przedmioty”,
+            a potem wróć do tego formularza.
+        </p>
+    }
+
+    <form @onsubmit="SubmitAsync" @onsubmit:preventDefault>
+
+        <label class="form-label">Co się dzieje z lekcją?</label>
+        <div class="subst-kinds" role="radiogroup" aria-label="Typ wpisu">
+            @foreach (var k in Enum.GetValues<SubstitutionKind>())
+            {
+                var kindValue = k;
+                <button type="button"
+                        role="radio"
+                        aria-checked="@((kind == kindValue).ToString().ToLowerInvariant())"
+                        class="subst-kind @(kind == kindValue ? "is-active" : "")"
+                        @onclick="() => kind = kindValue">
+                    @kindValue.ToLabel()
+                </button>
+            }
+        </div>
+
+        <div class="subst-form__row">
+            <div>
+                <label class="form-label">Data</label>
+                <input type="date" class="form-control" @bind="date" />
+            </div>
+            <div>
+                <label class="form-label">Lekcja</label>
+                <select class="form-select" @bind="lesson">
+                    @for (var i = 0; i <= Substitution.MaxLesson; i++)
+                    {
+                        <option value="@i">@(i == 0 ? "0 (zerowa)" : i.ToString())</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="subst-form__row">
+            <div>
+                <label class="form-label">Klasa</label>
+                <select class="form-select" @bind="classId">
+                    <option value="">— wybierz klasę —</option>
+                    @foreach (var c in classes)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Przedmiot (opcjonalnie)</label>
+                <select class="form-select" @bind="subjectId">
+                    <option value="">— brak —</option>
+                    @foreach (var s in subjects)
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="subst-form__row">
+            <div>
+                <label class="form-label">@(kind == SubstitutionKind.Substitution ? "Nieobecny nauczyciel (opcjonalnie)" : "Nauczyciel (opcjonalnie)")</label>
+                <select class="form-select" @bind="absentTeacherId">
+                    <option value="">— brak —</option>
+                    @foreach (var t in teachers)
+                    {
+                        <option value="@t.Id">@t.Name</option>
+                    }
+                </select>
+            </div>
+
+            @if (kind == SubstitutionKind.Substitution)
+            {
+                <div>
+                    <label class="form-label">Zastępuje</label>
+                    <select class="form-select" @bind="substituteTeacherId">
+                        <option value="">— wybierz nauczyciela —</option>
+                        @foreach (var t in teachers)
+                        {
+                            <option value="@t.Id">@t.Name</option>
+                        }
+                    </select>
+                </div>
+            }
+        </div>
+
+        @if (kind != SubstitutionKind.Cancelled)
+        {
+            <label class="form-label">@(kind == SubstitutionKind.RoomChange ? "Nowa sala" : "Sala (opcjonalnie)")</label>
+            <select class="form-select mb-3" @bind="roomId">
+                <option value="">@(kind == SubstitutionKind.RoomChange ? "— wybierz salę —" : "— bez zmiany / brak —")</option>
+                @foreach (var r in rooms)
+                {
+                    <option value="@r.Id">@r.Name</option>
+                }
+            </select>
+        }
+
+        <label class="form-label">Uwagi (opcjonalnie)</label>
+        <textarea @bind="note" @bind:event="oninput" class="form-control mb-3" rows="3"
+                  maxlength="@Substitution.MaxNoteLength"
+                  placeholder="Np. lekcja w sali gimnastycznej, przyjdźcie w strojach"
+                  style="resize: none"></textarea>
+
+        <button type="submit" class="btn btn-primary w-100" disabled="@saving">
+            @(IsEdit ? "Zatwierdź zmiany" : "Dodaj do zastępstw")
+        </button>
+
+        @if (OnCancel.HasDelegate)
+        {
+            <button type="button" class="btn btn-outline-primary w-100 mt-2" @onclick="() => OnCancel.InvokeAsync()">
+                Anuluj
+            </button>
+        }
+    </form>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsEdit { get; set; }
+    [Parameter]
+    public Substitution? Existing { get; set; }
+    [Parameter]
+    public EventCallback OnSaved { get; set; }
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private List<DictionaryRow> classes = new();
+    private List<DictionaryRow> subjects = new();
+    private List<DictionaryRow> teachers = new();
+    private List<DictionaryRow> rooms = new();
+    private bool loaded;
+    private bool saving;
+    private int? filledForId;
+
+    private SubstitutionKind kind = SubstitutionKind.Substitution;
+    private DateTime? date = DateTime.Today;
+    private int lesson = 1;
+    private int? classId;
+    private int? subjectId;
+    private int? absentTeacherId;
+    private int? substituteTeacherId;
+    private int? roomId;
+    private string note = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        classes = await dictionaryService.GetAllAsync(DictionaryKind.Class);
+        subjects = await dictionaryService.GetAllAsync(DictionaryKind.Subject);
+        teachers = await dictionaryService.GetAllAsync(DictionaryKind.Teacher);
+        rooms = await dictionaryService.GetAllAsync(DictionaryKind.Room);
+        loaded = true;
+    }
+
+    // Pola uzupełniamy raz na edytowany wpis – ponowne renderowanie rodzica nie nadpisuje tego, co już wpisano
+    protected override void OnParametersSet()
+    {
+        if (IsEdit && Existing != null && filledForId != Existing.Id)
+        {
+            filledForId = Existing.Id;
+            kind = Existing.Kind;
+            date = Existing.Date.ToDateTime(TimeOnly.MinValue);
+            lesson = Existing.Lesson;
+            classId = Existing.ClassId;
+            subjectId = Existing.SubjectId;
+            absentTeacherId = Existing.AbsentTeacherId;
+            substituteTeacherId = Existing.SubstituteTeacherId;
+            roomId = Existing.RoomId;
+            note = Existing.Note;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (date is null)
+        {
+            toastService.Error("Wybierz datę.");
+            return;
+        }
+
+        if (classId is null)
+        {
+            toastService.Error("Wybierz klasę.");
+            return;
+        }
+
+        var input = new SubstitutionInput(
+            DateOnly.FromDateTime(date.Value),
+            lesson,
+            kind,
+            classId.Value,
+            subjectId,
+            absentTeacherId,
+            substituteTeacherId,
+            roomId,
+            note);
+
+        saving = true;
+
+        try
+        {
+            if (IsEdit && Existing != null)
+            {
+                await substitutionService.UpdateAsync(Existing.Id, input);
+                toastService.Success("Zmiany zostały zapisane.");
+                await OnSaved.InvokeAsync();
+            }
+            else
+            {
+                await substitutionService.AddAsync(input);
+                toastService.Success("Zastępstwo zostało dodane.");
+
+                // data, lekcja i typ zostają – zwykle wpisuje się kilka zastępstw pod rząd
+                classId = null;
+                subjectId = null;
+                absentTeacherId = null;
+                substituteTeacherId = null;
+                roomId = null;
+                note = "";
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do tej operacji.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            toastService.Error(ex.Message);
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się zapisać zastępstwa.");
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}

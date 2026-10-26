@@ -29,6 +29,9 @@ namespace SchoolNewspaperBlazorApp
             builder.Services.AddScoped<IFileRepository, FileRepository>();
             builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
             builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+            builder.Services.AddScoped<IDictionaryRepository, DictionaryRepository>();
+            builder.Services.AddScoped<ISubstitutionRepository, SubstitutionRepository>();
+
 
             //Services
             builder.Services.AddScoped<IArticleService, ArticleService>();
@@ -37,6 +40,8 @@ namespace SchoolNewspaperBlazorApp
             builder.Services.AddScoped<IPermissionService, PermissionService>();
             builder.Services.AddScoped<IRoleService, RoleService>();
             builder.Services.AddScoped<ToastService>();
+            builder.Services.AddScoped<IDictionaryService, DictionaryService>();
+            builder.Services.AddScoped<ISubstitutionService, SubstitutionService>();
 
             builder.Services.AddAuthentication(
                 CookieAuthenticationDefaults.AuthenticationScheme)

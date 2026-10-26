@@ -1,0 +1,212 @@
+@using SchoolNewspaperBlazorApp.Data
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@using SchoolNewspaperBlazorApp.Service
+@inject IDictionaryService dictionaryService
+@inject ToastService toastService
+
+@if (!loaded)
+{
+    <p class="empty-state">Wczytywanie…</p>
+}
+else if (allowedKinds.Count == 0)
+{
+    <p class="empty-state">Nie masz uprawnień do zarządzania żadnym ze słowników.</p>
+}
+else
+{
+    <div class="dict-tabs" role="tablist" aria-label="Słowniki">
+        @foreach (var k in allowedKinds)
+        {
+            var tabKind = k;
+            <button type="button"
+                    role="tab"
+                    aria-selected="@((kind == tabKind).ToString().ToLowerInvariant())"
+                    class="dict-tab @(kind == tabKind ? "is-active" : "")"
+                    @onclick="() => SelectKind(tabKind)">
+                <span aria-hidden="true">@tabKind.ToIcon()</span>
+                @tabKind.ToLabel()
+                <span class="dict-tab__count">@entries[tabKind].Count</span>
+            </button>
+        }
+    </div>
+
+    <form class="dict-add" @onsubmit="AddAsync" @onsubmit:preventDefault>
+        <input class="form-control"
+               @bind="newName"
+               @bind:event="oninput"
+               maxlength="@kind.MaxNameLength()"
+               placeholder="@kind.ToPlaceholder()"
+               aria-label="Nowy wpis: @kind.ToSingular()"
+               autocomplete="off" />
+        <button type="submit" class="btn btn-primary" disabled="@busy">+ Dodaj</button>
+    </form>
+
+    @if (entries[kind].Count == 0)
+    {
+        <p class="empty-state">Ten słownik jest jeszcze pusty.</p>
+    }
+    else
+    {
+        <ul class="dict-list">
+            @foreach (var entry in entries[kind])
+            {
+                <li class="dict-item" @key="entry.Id">
+                    @if (editingId == entry.Id)
+                    {
+                        <input class="form-control"
+                               @bind="editName"
+                               @bind:event="oninput"
+                               maxlength="@kind.MaxNameLength()"
+                               aria-label="Nowa nazwa"
+                               autocomplete="off" />
+                        <div class="dict-item__actions">
+                            <button type="button" class="btn btn-sm btn-primary" disabled="@busy"
+                                    @onclick="() => SaveEditAsync(entry.Id)">
+                                Zapisz
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    @onclick="() => editingId = null">
+                                Anuluj
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="dict-item__name">@entry.Name</span>
+                        <div class="dict-item__actions">
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    @onclick="() => StartEdit(entry)">
+                                Zmień nazwę
+                            </button>
+
+                            @if (confirmDeleteId == entry.Id)
+                            {
+                                <button type="button" class="btn btn-sm btn-danger" disabled="@busy"
+                                        @onclick="() => DeleteAsync(entry.Id)">
+                                    Potwierdź
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => confirmDeleteId = null">
+                                    Anuluj
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => confirmDeleteId = entry.Id">
+                                    Usuń
+                                </button>
+                            }
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private readonly Dictionary<DictionaryKind, List<DictionaryRow>> entries = new();
+    private readonly List<DictionaryKind> allowedKinds = new();
+    private DictionaryKind kind;
+    private bool loaded;
+    private bool busy;
+    private string newName = "";
+    private int? editingId;
+    private string editName = "";
+    private int? confirmDeleteId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // zakładki tylko dla słowników, do których konto ma uprawnienie
+        foreach (var k in Enum.GetValues<DictionaryKind>())
+        {
+            if (await dictionaryService.CanManageAsync(k))
+            {
+                allowedKinds.Add(k);
+                entries[k] = await dictionaryService.GetAllAsync(k);
+            }
+        }
+
+        if (allowedKinds.Count > 0)
+        {
+            kind = allowedKinds[0];
+        }
+
+        loaded = true;
+    }
+
+    private void SelectKind(DictionaryKind target)
+    {
+        kind = target;
+        newName = "";
+        editingId = null;
+        confirmDeleteId = null;
+    }
+
+    private void StartEdit(DictionaryRow entry)
+    {
+        editingId = entry.Id;
+        editName = entry.Name;
+        confirmDeleteId = null;
+    }
+
+    private async Task AddAsync()
+    {
+        await RunAsync(async () =>
+        {
+            var name = newName.Trim();
+            await dictionaryService.AddAsync(kind, name);
+            newName = "";
+            toastService.Success($"Dodano: {name}.");
+        }, "Nie udało się dodać wpisu.");
+    }
+
+    private async Task SaveEditAsync(int id)
+    {
+        await RunAsync(async () =>
+        {
+            await dictionaryService.UpdateAsync(kind, id, editName);
+            editingId = null;
+            toastService.Success("Nazwa została zmieniona.");
+        }, "Nie udało się zmienić nazwy.");
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        await RunAsync(async () =>
+        {
+            await dictionaryService.DeleteAsync(kind, id);
+            confirmDeleteId = null;
+            toastService.Success("Wpis został usunięty.");
+        }, "Nie udało się usunąć wpisu.");
+    }
+
+    // Wspólna obsługa błędów dla dodawania, zmiany nazwy i usuwania
+    private async Task RunAsync(Func<Task> action, string fallbackError)
+    {
+        busy = true;
+
+        try
+        {
+            await action();
+            entries[kind] = await dictionaryService.GetAllAsync(kind);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do zarządzania tym słownikiem.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            toastService.Error(ex.Message);
+        }
+        catch (Exception)
+        {
+            toastService.Error(fallbackError);
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

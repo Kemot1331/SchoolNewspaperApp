@@ -1,0 +1,70 @@
+@page "/zastepstwa"
+@using SchoolNewspaperBlazorApp.Components.Components
+@using SchoolNewspaperBlazorApp.Data
+@using SchoolNewspaperBlazorApp.Interfaces.Service
+@inject ISubstitutionService substitutionService
+@inject IDictionaryService dictionaryService
+
+<PageTitle>Zastępstwa | Gazetka ETI</PageTitle>
+
+<section class="home-hero">
+    <span class="home-hero__eyebrow">Zmiany w planie lekcji</span>
+    <h1>Zastępstwa</h1>
+    <p>Aktualne zastępstwa, odwołane lekcje i zmiany sal. Wybierz klasę albo nauczyciela, żeby zobaczyć tylko swoje zmiany.</p>
+</section>
+
+<form method="get" action="/zastepstwa" class="subst-filter">
+    <div>
+        <label class="form-label" for="filter-class">Klasa</label>
+        <select id="filter-class" name="klasa" class="form-select">
+            <option value="">Wszystkie klasy</option>
+            @foreach (var c in classes)
+            {
+                <option value="@c.Id" selected="@(ClassId == c.Id)">@c.Name</option>
+            }
+        </select>
+    </div>
+
+    <div>
+        <label class="form-label" for="filter-teacher">Nauczyciel</label>
+        <select id="filter-teacher" name="nauczyciel" class="form-select">
+            <option value="">Wszyscy nauczyciele</option>
+            @foreach (var t in teachers)
+            {
+                <option value="@t.Id" selected="@(TeacherId == t.Id)">@t.Name</option>
+            }
+        </select>
+    </div>
+
+    <div class="subst-filter__actions">
+        <button type="submit" class="btn btn-primary">Filtruj</button>
+        @if (ClassId != null || TeacherId != null)
+        {
+            <a class="btn btn-outline-primary" href="/zastepstwa">Wyczyść</a>
+        }
+    </div>
+</form>
+
+<SubstitutionTable Items="items"
+                   EmptyText="@(ClassId != null || TeacherId != null ? "Dla wybranych filtrów nie ma zastępstw." : "Na razie nie ma żadnych zastępstw.")" />
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "klasa")]
+    public int? ClassId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "nauczyciel")]
+    public int? TeacherId { get; set; }
+
+    private List<DictionaryRow> classes = new();
+    private List<DictionaryRow> teachers = new();
+    private List<Substitution> items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        classes = await dictionaryService.GetAllAsync(DictionaryKind.Class);
+        teachers = await dictionaryService.GetAllAsync(DictionaryKind.Teacher);
+        items = await substitutionService.GetUpcomingAsync(ClassId, TeacherId);
+    }
+}

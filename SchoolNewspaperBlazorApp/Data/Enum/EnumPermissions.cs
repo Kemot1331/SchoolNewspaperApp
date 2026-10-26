@@ -7,5 +7,11 @@ public enum EnumPermissions
     DeleteArticle,
     AddUser,
     ManageUser,
-    Master
+    Master,
+    ManageClasses,
+    ManageTeachers,
+    ManageRooms,
+    ManageSubjects,
+    AddSubstitution,
+    ManageSubstitution
 }

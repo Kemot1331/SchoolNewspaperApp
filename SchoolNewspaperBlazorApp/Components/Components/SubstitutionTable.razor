@@ -1,0 +1,153 @@
+@using SchoolNewspaperBlazorApp.Data
+
+@if (Items.Count == 0)
+{
+    <p class="empty-state">@EmptyText</p>
+}
+else
+{
+    @foreach (var day in Items.GroupBy(s => s.Date))
+    {
+        <section class="subst-day" @key="day.Key">
+            <h3 class="subst-day__title">
+                @DayLabel(day.Key)
+                <span class="subst-day__count">@day.Count()</span>
+            </h3>
+
+            <div class="subst-table-wrap">
+                <table class="subst-table">
+                    <thead>
+                        <tr>
+                            <th>Lekcja</th>
+                            <th>Klasa</th>
+                            <th>Typ</th>
+                            <th>Przedmiot</th>
+                            <th>Nauczyciel</th>
+                            <th>Sala</th>
+                            <th>Uwagi</th>
+                            @if (ShowActions)
+                            {
+                                <th></th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in day)
+                        {
+                            <tr @key="s.Id">
+                                <td class="subst-table__lesson">@s.LessonLabel</td>
+                                <td><strong>@s.Class.Name</strong></td>
+                                <td>
+                                    <span class="@($"subst-badge subst-badge--{s.Kind.ToString().ToLowerInvariant()}")">
+                                        @s.Kind.ToLabel()
+                                    </span>
+                                </td>
+                                <td>@(s.Subject?.Name ?? "—")</td>
+                                <td>
+                                    @if (s.Kind == SubstitutionKind.Substitution)
+                                    {
+                                        if (s.AbsentTeacher != null)
+                                        {
+                                            <span class="subst-teacher--absent">@s.AbsentTeacher.Name</span>
+                                            <span aria-hidden="true"> → </span>
+                                            <strong>@(s.SubstituteTeacher?.Name)</strong>
+                                        }
+                                        else
+                                        {
+                                            <span>zastępuje: </span>
+                                            <strong>@(s.SubstituteTeacher?.Name)</strong>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>@(s.AbsentTeacher?.Name ?? "—")</span>
+                                    }
+                                </td>
+                                <td>@(s.Room?.Name ?? "—")</td>
+                                <td class="subst-table__note">@(string.IsNullOrWhiteSpace(s.Note) ? "—" : s.Note)</td>
+                                @if (ShowActions)
+                                {
+                                    <td class="subst-table__actions">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                @onclick="() => OnEdit.InvokeAsync(s)">
+                                            Edytuj
+                                        </button>
+
+                                        @if (confirmId == s.Id)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-danger"
+                                                    @onclick="() => ConfirmDeleteAsync(s.Id)">
+                                                Potwierdź
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => confirmId = null">
+                                                Anuluj
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => confirmId = s.Id">
+                                                Usuń
+                                            </button>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+}
+
+@code {
+    [Parameter]
+    public List<Substitution> Items { get; set; } = new();
+    // true = przyciski Edytuj / Usuń (panel admina); strona publiczna ich nie pokazuje
+    [Parameter]
+    public bool ShowActions { get; set; }
+    [Parameter]
+    public EventCallback<Substitution> OnEdit { get; set; }
+    [Parameter]
+    public EventCallback<int> OnDelete { get; set; }
+    [Parameter]
+    public string EmptyText { get; set; } = "Brak zastępstw.";
+
+    private int? confirmId;
+
+    private async Task ConfirmDeleteAsync(int id)
+    {
+        confirmId = null;
+        await OnDelete.InvokeAsync(id);
+    }
+
+    private static readonly string[] DayNames =
+        { "niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota" };
+
+    private static readonly string[] MonthNames =
+    {
+        "stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca",
+        "lipca", "sierpnia", "września", "października", "listopada", "grudnia"
+    };
+
+    // Własne nazwy zamiast CultureInfo("pl-PL") – działa też przy wyłączonej globalizacji
+    private static string DayLabel(DateOnly date)
+    {
+        var text = $"{DayNames[(int)date.DayOfWeek]}, {date.Day} {MonthNames[date.Month - 1]} {date.Year}";
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        if (date == today)
+        {
+            return $"Dziś · {text}";
+        }
+
+        if (date == today.AddDays(1))
+        {
+            return $"Jutro · {text}";
+        }
+
+        return text;
+    }
+}

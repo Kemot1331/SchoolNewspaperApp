@@ -193,6 +193,72 @@
                 </button>
             }
 
+            @if (canAddSubstitution)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(8)">
+
+                    <span class="admin-action__icon">⇄</span>
+
+                    <span class="admin-action__number">07</span>
+
+                    <strong>Dodaj zastępstwo</strong>
+
+                    <span class="admin-action__description">
+                        Zgłoś zastępstwo, odwołaną lekcję albo zmianę sali.
+                    </span>
+
+                    <span class="admin-action__footer">
+                        Dodaj zastępstwo <span>→</span>
+                    </span>
+                </button>
+            }
+
+            @if (canManageSubstitution)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(9)">
+
+                    <span class="admin-action__icon">☰</span>
+
+                    <span class="admin-action__number">08</span>
+
+                    <strong>Lista zastępstw</strong>
+
+                    <span class="admin-action__description">
+                        Edytuj albo usuń dodane zastępstwa.
+                    </span>
+
+                    <span class="admin-action__footer">
+                        Zarządzaj zastępstwami <span>→</span>
+                    </span>
+                </button>
+            }
+
+            @if (canManageDictionaries)
+            {
+                <button type="button"
+                        class="admin-action"
+                        @onclick="() => SetView(10)">
+
+                    <span class="admin-action__icon">▦</span>
+
+                    <span class="admin-action__number">09</span>
+
+                    <strong>Klasy, nauczyciele, sale, przedmioty</strong>
+
+                    <span class="admin-action__description">
+                        Uzupełnij słowniki używane w formularzu zastępstw.
+                    </span>
+
+                    <span class="admin-action__footer">
+                        Zarządzaj słownikami <span>→</span>
+                    </span>
+                </button>
+            }
+
         </div>
 
         <section class="admin-section">
@@ -238,6 +304,18 @@
                 else if (view == 7)
                 {
                     <span>Zarządzanie użytkownikami</span>
+                }
+                else if (view == 8)
+                {
+                    <span>Dodawanie zastępstwa</span>
+                }
+                else if (view == 9)
+                {
+                    <span>Zarządzanie zastępstwami</span>
+                }
+                else if (view == 10)
+                {
+                    <span>Słowniki zastępstw</span>
                 }
             </div>
         </div>
@@ -350,6 +428,65 @@
         {
             <ManageUsersCard></ManageUsersCard>
         }
+        else if (view == 8)
+        {
+            <section class="admin-content-panel">
+                <div class="admin-content-panel__header">
+                    <div>
+                        <span class="admin-section-heading__eyebrow">
+                            PLAN LEKCJI
+                        </span>
+                        <h2>Dodaj zastępstwo</h2>
+                        <p>Wybierz typ wpisu i uzupełnij dane – zmiana od razu pojawi się na stronie Zastępstwa.</p>
+                    </div>
+                </div>
+
+                <div class="admin-form-wrapper">
+                    <SubstitutionForm />
+                </div>
+            </section>
+        }
+        else if (view == 9)
+        {
+            <section class="admin-content-panel">
+                <div class="admin-content-panel__header">
+                    <div>
+                        <span class="admin-section-heading__eyebrow">
+                            PLAN LEKCJI
+                        </span>
+                        <h2>Lista zastępstw</h2>
+                        <p>Najnowsze wpisy na górze. Edytuj je albo usuń.</p>
+                    </div>
+
+                    @if (canAddSubstitution)
+                    {
+                        <button type="button"
+                                class="admin-small-button"
+                                @onclick="() => SetView(8)">
+                            + Dodaj zastępstwo
+                        </button>
+                    }
+                </div>
+
+                <SubstitutionsManageCard />
+            </section>
+        }
+        else if (view == 10)
+        {
+            <section class="admin-content-panel">
+                <div class="admin-content-panel__header">
+                    <div>
+                        <span class="admin-section-heading__eyebrow">
+                            SŁOWNIKI
+                        </span>
+                        <h2>Klasy, nauczyciele, sale, przedmioty</h2>
+                        <p>Te listy pojawiają się jako wybór w formularzu zastępstw.</p>
+                    </div>
+                </div>
+
+                <DictionaryManagerCard />
+            </section>
+        }
     }
 
 </div>
@@ -364,9 +501,20 @@
     private bool canDeleteArticle;
     private bool canAddUser;
     private bool canManageUsers;
+    private bool canAddSubstitution;
+    private bool canManageSubstitution;
+    private bool canManageClasses;
+    private bool canManageTeachers;
+    private bool canManageRooms;
+    private bool canManageSubjects;
+
+    // słowniki: wystarczy uprawnienie do któregokolwiek z czterech
+    private bool canManageDictionaries =>
+        canManageClasses || canManageTeachers || canManageRooms || canManageSubjects;
 
     private bool hasAnyPermission =>
-        canAddArticle || canEditArticle || canDeleteArticle || canAddUser || canManageUsers;
+        canAddArticle || canEditArticle || canDeleteArticle || canAddUser || canManageUsers
+        || canAddSubstitution || canManageSubstitution || canManageDictionaries;
 
     protected override async Task OnInitializedAsync()
     {
@@ -375,6 +523,12 @@
         canDeleteArticle = await HasAsync(EnumPermissions.DeleteArticle);
         canAddUser = await HasAsync(EnumPermissions.AddUser);
         canManageUsers = await HasAsync(EnumPermissions.ManageUser);
+        canAddSubstitution = await HasAsync(EnumPermissions.AddSubstitution);
+        canManageSubstitution = await HasAsync(EnumPermissions.ManageSubstitution);
+        canManageClasses = await HasAsync(EnumPermissions.ManageClasses);
+        canManageTeachers = await HasAsync(EnumPermissions.ManageTeachers);
+        canManageRooms = await HasAsync(EnumPermissions.ManageRooms);
+        canManageSubjects = await HasAsync(EnumPermissions.ManageSubjects);
     }
 
     // Master ma dostęp do wszystkiego
@@ -395,6 +549,9 @@
         5 => canManageUsers,
         6 => canManageUsers,
         7 => canManageUsers,
+        8 => canAddSubstitution,
+        9 => canManageSubstitution,
+        10 => canManageDictionaries,
         _ => false
     };
 
