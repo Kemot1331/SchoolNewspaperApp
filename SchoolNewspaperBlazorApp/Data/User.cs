@@ -18,6 +18,9 @@ namespace SchoolNewspaperBlazorApp.Data
 
         // Soft delete: 0 = aktywne konto, 1 = usunięte (wiersz zostaje w bazie)
         public bool IsDeleted { get; set; }
+
+        // true = użytkownik musi ustawić własne hasło przy najbliższym logowaniu
+        public bool MustChangePassword { get; set; }
         public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
         public Role? Role { get; set; }
     }

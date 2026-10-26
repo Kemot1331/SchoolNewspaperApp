@@ -11,5 +11,7 @@ namespace SchoolNewspaperBlazorApp.Interfaces.Service
         Task DeleteUserByIdAsync(int id);
         Task<UserDetails?> GetUserDetailsAsync(int id);
         Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? newPassword);
+        Task<bool> MustChangePasswordAsync(int userId);
+        Task ChangePasswordAsync(int userId, string currentPassword, string newPassword);
     }
 }

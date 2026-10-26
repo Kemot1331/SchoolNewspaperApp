@@ -18,6 +18,8 @@ namespace SchoolNewspaperBlazorApp.Service
         private readonly AuthenticationStateProvider _authenticationStateProvider;
         private readonly ILogger<AuthService> _logger;
 
+        private const int MinPasswordLength = 8;
+
         public AuthService(
             IAuthRepository authRepository,
             IPermissionRepository permissionRepository,
@@ -50,7 +52,9 @@ namespace SchoolNewspaperBlazorApp.Service
                 Email = email,
                 RegisterDate = DateTime.Now,
                 FirstName = firstName.Trim(),
-                LastName = lastName.Trim()
+                LastName = lastName.Trim(),
+                // hasło ustawił admin, więc przy 1. logowaniu użytkownik ustawia własne
+                MustChangePassword = true
             };
 
             await _authRepository.AddUserAsync(user);
@@ -144,7 +148,47 @@ namespace SchoolNewspaperBlazorApp.Service
                 passwordHash = new PasswordHasher<string>().HashPassword(null!, newPassword);
             }
 
-            await _authRepository.UpdateUserAsync(id, login, email, firstName, lastName, passwordHash);
+            // Hasło ustawione komuś innemu = ta osoba musi je zmienić przy logowaniu.
+            // Własne hasło zmieniamy świadomie, więc bez wymuszania.
+            var forcePasswordChange = currentId != id.ToString();
+
+            await _authRepository.UpdateUserAsync(id, login, email, firstName, lastName, passwordHash, forcePasswordChange);
+        }
+
+        public async Task<bool> MustChangePasswordAsync(int userId)
+        {
+            var user = await _authRepository.GetUserByIdAsync(userId);
+            return user != null && user.MustChangePassword;
+        }
+
+        // userId pochodzi z ciasteczka logowania (nie z formularza), więc zmieniamy tylko własne hasło
+        public async Task ChangePasswordAsync(int userId, string currentPassword, string newPassword)
+        {
+            if (string.IsNullOrEmpty(newPassword) || newPassword.Length < MinPasswordLength)
+            {
+                throw new InvalidOperationException($"Nowe hasło musi mieć co najmniej {MinPasswordLength} znaków.");
+            }
+
+            var user = await _authRepository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                throw new InvalidOperationException("Konto nie istnieje.");
+            }
+
+            var hasher = new PasswordHasher<string>();
+            var verification = hasher.VerifyHashedPassword(null!, user.Password, currentPassword ?? string.Empty);
+            if (verification == PasswordVerificationResult.Failed)
+            {
+                throw new InvalidOperationException("Obecne hasło jest nieprawidłowe.");
+            }
+
+            if (currentPassword == newPassword)
+            {
+                throw new InvalidOperationException("Nowe hasło musi się różnić od obecnego.");
+            }
+
+            var newHash = hasher.HashPassword(null!, newPassword);
+            await _authRepository.UpdatePasswordAsync(userId, newHash);
         }
 
         public async Task DeleteUserByIdAsync(int id)

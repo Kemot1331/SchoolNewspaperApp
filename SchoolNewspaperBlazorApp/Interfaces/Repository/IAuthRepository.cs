@@ -10,6 +10,7 @@ namespace SchoolNewspaperBlazorApp.Interfaces.Repository
         Task<User>? GetUserByIdAsync(int id);
         Task DeleteUserByIdAsync(int id);
         Task<bool> IsLoginOrEmailTakenAsync(int excludeUserId, string login, string email);
-        Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? passwordHash);
+        Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? passwordHash, bool forcePasswordChange);
+        Task UpdatePasswordAsync(int id, string passwordHash);
     }
 }

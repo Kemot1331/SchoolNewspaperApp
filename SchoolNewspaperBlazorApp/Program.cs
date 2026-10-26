@@ -89,12 +89,61 @@ namespace SchoolNewspaperBlazorApp
                     claims.Add(new Claim("FullName", fullName));
                 }
 
+                // 1. logowanie (albo reset hasła przez admina) – najpierw trzeba ustawić własne hasło
+                var mustChangePassword = await authService.MustChangePasswordAsync(userId);
+                if (mustChangePassword)
+                {
+                    claims.Add(new Claim("MustChangePassword", "true"));
+                }
+
                 var identity = new ClaimsIdentity(
                     claims,
                     CookieAuthenticationDefaults.AuthenticationScheme);
                 var principal = new ClaimsPrincipal(identity);
                 await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
                     principal);
+                return Results.Redirect(mustChangePassword ? "/zmiana-hasla" : "/adminPanel");
+            });
+
+            // zmiana własnego hasła (formularz ze strony /zmiana-hasla)
+            app.MapPost("/auth/change-password", async (
+                HttpContext context,
+                IAuthService authService) =>
+            {
+                if (context.User.Identity?.IsAuthenticated != true
+                    || !int.TryParse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+                {
+                    return Results.Redirect("/login");
+                }
+
+                var form = await context.Request.ReadFormAsync();
+                string currentPassword = form["CurrentPassword"].ToString();
+                string newPassword = form["NewPassword"].ToString();
+                string confirmPassword = form["ConfirmPassword"].ToString();
+
+                if (newPassword != confirmPassword)
+                {
+                    return Results.Redirect("/zmiana-hasla?error=" + Uri.EscapeDataString("Nowe hasła nie są takie same."));
+                }
+
+                try
+                {
+                    await authService.ChangePasswordAsync(userId, currentPassword, newPassword);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return Results.Redirect("/zmiana-hasla?error=" + Uri.EscapeDataString(ex.Message));
+                }
+                catch (Exception)
+                {
+                    return Results.Redirect("/zmiana-hasla?error=" + Uri.EscapeDataString("Nie udało się zmienić hasła."));
+                }
+
+                // nowe ciasteczko bez znacznika MustChangePassword, inaczej middleware dalej blokowałby użytkownika
+                var claims = context.User.Claims.Where(c => c.Type != "MustChangePassword").ToList();
+                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(identity));
                 return Results.Redirect("/adminPanel");
             });
             
@@ -120,6 +169,31 @@ namespace SchoolNewspaperBlazorApp
             app.UseHttpsRedirection();
 
             app.UseStaticFiles();
+
+            // Kto musi zmienić hasło, widzi tylko stronę zmiany hasła (nie wejdzie ręcznie np. na /adminPanel)
+            app.UseAuthentication();
+            app.Use(async (context, next) =>
+            {
+                var path = context.Request.Path;
+                var mustChange = context.User.Identity?.IsAuthenticated == true
+                                 && context.User.HasClaim("MustChangePassword", "true");
+                var allowed = path.StartsWithSegments("/zmiana-hasla")
+                              || path.StartsWithSegments("/auth")
+                              || path.StartsWithSegments("/_blazor")
+                              || path.StartsWithSegments("/_framework")
+                              || path.StartsWithSegments("/_content");
+
+                if (mustChange && !allowed)
+                {
+                    context.Response.Redirect("/zmiana-hasla");
+                    return;
+                }
+
+                await next();
+            });
+
+            // musi być po UseAuthentication, inaczej [Authorize] widzi użytkownika jako niezalogowanego
+            app.UseAuthorization();
             app.UseAntiforgery();
 
             app.MapRazorComponents<App>()

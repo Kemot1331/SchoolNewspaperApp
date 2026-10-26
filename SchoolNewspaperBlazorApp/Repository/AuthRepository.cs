@@ -58,7 +58,8 @@
             }
 
             // passwordHash == null oznacza: hasła nie zmieniamy
-            public async Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? passwordHash)
+            // forcePasswordChange: po zmianie hasła przez admina użytkownik musi ustawić własne
+            public async Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? passwordHash, bool forcePasswordChange)
             {
                 await using var context = await _factory.CreateDbContextAsync();
                 var user = await context.User.FirstOrDefaultAsync(u => u.Id == id);
@@ -75,8 +76,25 @@
                 if (passwordHash != null)
                 {
                     user.Password = passwordHash;
+                    user.MustChangePassword = forcePasswordChange;
                 }
 
+                await context.SaveChangesAsync();
+            }
+
+            // Zapisuje nowe hasło i zdejmuje wymuszenie jego zmiany
+            public async Task UpdatePasswordAsync(int id, string passwordHash)
+            {
+                await using var context = await _factory.CreateDbContextAsync();
+                var user = await context.User.FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    throw new Exception("Konto nie istnieje");
+                }
+
+                user.Password = passwordHash;
+                user.MustChangePassword = false;
                 await context.SaveChangesAsync();
             }
 
