@@ -1,0 +1,105 @@
+﻿/* ========== WYSZUKIWARKA NA STRONIE GŁÓWNEJ ========== */
+
+.home-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 560px;
+    margin: 0 0 18px;
+    padding: 6px 6px 6px 18px;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 4px 0 var(--eti-border-strong), 0 9px 20px rgba(0, 0, 0, .1);
+    transition: box-shadow .2s ease;
+}
+
+    .home-search:focus-within {
+        box-shadow: 0 4px 0 var(--eti-border-strong), 0 0 0 4px rgba(255, 255, 255, .35), 0 9px 20px rgba(0, 0, 0, .1);
+    }
+
+.home-search__icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    color: var(--eti-muted);
+}
+
+.home-search__input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 0;
+    border: 0;
+    background: transparent;
+    color: var(--eti-text);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+    .home-search__input:focus,
+    .home-search__input:focus-visible {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .home-search__input::placeholder {
+        color: var(--eti-muted);
+        font-weight: 500;
+    }
+
+    /* własny przycisk "Wyczyść" zamiast natywnego krzyżyka */
+    .home-search__input::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+.home-search__submit {
+    flex: none;
+    padding: 11px 20px;
+    border: 0;
+    border-radius: 11px;
+    background: var(--eti-blue);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+}
+
+    .home-search__submit:hover {
+        background: var(--eti-blue-hover);
+        transform: translateY(-1px);
+    }
+
+/* przycisk czyszczący wyniki – obok nagłówka sekcji */
+.home-search-clear {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 15px;
+    border: 1px solid var(--eti-border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--eti-muted);
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color .2s ease, color .2s ease;
+}
+
+    .home-search-clear:hover {
+        border-color: var(--eti-blue);
+        color: var(--eti-blue);
+    }
+
+@media (max-width: 480px) {
+    .home-search {
+        padding-left: 14px;
+    }
+
+    .home-search__submit {
+        padding: 11px 14px;
+    }
+}

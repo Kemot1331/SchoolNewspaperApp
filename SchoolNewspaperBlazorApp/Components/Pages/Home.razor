@@ -1,8 +1,10 @@
 ﻿@page "/"
+@using System.Globalization
+@using System.Text
 @using SchoolNewspaperBlazorApp.Components.Components
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
-@inject IArticleService articleService;
+@inject IArticleService articleService
 
 <PageTitle>Gazetka ETI</PageTitle>
 
@@ -16,6 +18,28 @@
         tworzone przez uczniów.
     </p>
 
+    <form class="home-search" role="search" method="get" action="/#aktualnosci">
+        <label for="home-search-input" class="visually-hidden">Szukaj artykułów</label>
+
+        <svg class="home-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+        </svg>
+
+        <input id="home-search-input"
+               class="home-search__input"
+               type="search"
+               name="q"
+               value="@searchTerm"
+               placeholder="Szukaj artykułów, wydarzeń, ogłoszeń…"
+               maxlength="100"
+               autocomplete="off"
+               enterkeyhint="search" />
+
+        <button type="submit" class="home-search__submit">Szukaj</button>
+    </form>
+
     <a href="/aktualnosci" class="home-hero__button">
         Czytaj aktualności <span aria-hidden="true">→</span>
     </a>
@@ -23,19 +47,116 @@
 
 <div class="section-heading" id="aktualnosci">
     <div>
-        <h2>Najnowsze artykuły</h2>
-        <p>Świeże wiadomości od redakcji gazetki.</p>
+        @if (HasQuery)
+        {
+            <h2>Wyniki wyszukiwania</h2>
+            <p>Znaleziono @(results.Count) @(ArticlesWord(results.Count)) dla „@(searchTerm)”.</p>
+        }
+        else
+        {
+            <h2>Najnowsze artykuły</h2>
+            <p>Świeże wiadomości od redakcji gazetki.</p>
+        }
     </div>
+
+    @if (HasQuery)
+    {
+        <a href="/#aktualnosci" class="home-search-clear">Wyczyść <span aria-hidden="true">✕</span></a>
+    }
 </div>
 
-<ArticleCard Articles="articles" permissions="false" />
-
-
-@code 
+@if (HasQuery && results.Count == 0)
 {
-    public List<Article> articles = new List<Article>();
+    <p class="empty-state">
+        Nie znaleźliśmy artykułów pasujących do „@(searchTerm)”. Spróbuj użyć innego słowa.
+    </p>
+}
+else
+{
+    <ArticleCard Articles="results" permissions="false" />
+}
+
+@code
+{
+    // wartość z adresu: /?q=egzamin
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? Query { get; set; }
+
+    private List<Article> articles = new();
+    private List<Article> results = new();
+    private string searchTerm = string.Empty;
+
+    private bool HasQuery => searchTerm.Length > 0;
+
     protected override async Task OnInitializedAsync()
     {
         articles = await articleService.GetAllArticlesAsync();
+    }
+
+    // uruchamia się po OnInitializedAsync i przy każdej zmianie ?q=
+    protected override void OnParametersSet()
+    {
+        searchTerm = (Query ?? string.Empty).Trim();
+        if (searchTerm.Length > 100)
+        {
+            searchTerm = searchTerm[..100];
+        }
+
+        results = HasQuery ? Search(searchTerm) : articles;
+    }
+
+    // Każde słowo z zapytania musi wystąpić w tytule, treści, autorze lub nazwie kategorii.
+    private List<Article> Search(string term)
+    {
+        var words = Fold(term).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0)
+        {
+            return articles;
+        }
+
+        return articles
+            .Where(a =>
+            {
+                var haystack = Fold($"{a.Title} {a.Text} {a.AuthorDisplay} {a.EventsType?.ToLabel()}");
+                return words.All(w => haystack.Contains(w));
+            })
+            .ToList();
+    }
+
+    // małe litery + bez polskich znaków, żeby "zastepstwa" znalazło "Zastępstwa"
+    private static string Fold(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        // "ł" nie rozkłada się przy Normalize, więc zamieniamy ją ręcznie
+        var decomposed = text.ToLowerInvariant().Replace('ł', 'l').Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(decomposed.Length);
+
+        foreach (var c in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                sb.Append(c);
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    // 1 artykuł, 2–4 artykuły, 5+ artykułów (z wyjątkiem 12–14)
+    private static string ArticlesWord(int count)
+    {
+        if (count == 1) return "artykuł";
+
+        var lastDigit = count % 10;
+        var lastTwoDigits = count % 100;
+
+        return lastDigit is >= 2 and <= 4 && lastTwoDigits is not (>= 12 and <= 14)
+            ? "artykuły"
+            : "artykułów";
     }
 }
