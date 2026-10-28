@@ -5,22 +5,45 @@
 <div class="article-grid">
     @foreach (var article in Articles)
     {
+        var imageUrl = GetImageUrl(article.FileId);
+
         if (permissions == true)
         {
             <div class="article-card">
                 <div class="article-card__img-wrap">
-                    <img src="@GetImageUrl(article.FileId)" class="article-card__img" alt="@article.Title" loading="lazy">
+                    @if (imageUrl.Length > 0)
+                    {
+                        <img src="@imageUrl" class="article-card__img-bg" alt="" aria-hidden="true" loading="lazy">
+                        <img src="@imageUrl" class="article-card__img" alt="@article.Title" loading="lazy">
+                    }
+                    else
+                    {
+                        <div class="article-card__placeholder">Brak zdjęcia okładki</div>
+                    }
                 </div>
                 <div class="article-card__body">
                     <h5 class="article-card__title">@article.Title</h5>
-                    <p class="article-card__text">@article.Text</p>
+                    <p class="article-card__text">@ArticleContent.PlainText(article.Text)</p>
                     <div class="article-card__footer">
                         <span class="article-card__author">@article.AuthorDisplay</span>
                         @if (CanDelete)
                         {
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
-                                Usuń artykuł
-                            </button>
+                            if (confirmDeleteId == article.Id)
+                            {
+                                <span class="small">Na pewno?</span>
+                                <button class="btn btn-sm btn-danger" @onclick="() => RemoveArticleByIdAsync(article.Id)">
+                                    Tak, usuń
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => confirmDeleteId = null">
+                                    Nie
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => confirmDeleteId = article.Id">
+                                    Usuń artykuł
+                                </button>
+                            }
                         }
                         @if (CanEdit)
                         {
@@ -36,11 +59,19 @@
         {
             <NavLink class="article-card article-card--link" href="@($"/article/{article.Id}")">
                 <div class="article-card__img-wrap">
-                    <img src="@GetImageUrl(article.FileId)" class="article-card__img" alt="@article.Title" loading="lazy">
+                    @if (imageUrl.Length > 0)
+                    {
+                        <img src="@imageUrl" class="article-card__img-bg" alt="" aria-hidden="true" loading="lazy">
+                        <img src="@imageUrl" class="article-card__img" alt="@article.Title" loading="lazy">
+                    }
+                    else
+                    {
+                        <div class="article-card__placeholder">Brak zdjęcia okładki</div>
+                    }
                 </div>
                 <div class="article-card__body">
                     <h5 class="article-card__title">@article.Title</h5>
-                    <p class="article-card__text">@article.Text</p>
+                    <p class="article-card__text">@ArticleContent.PlainText(article.Text)</p>
                     <div class="article-card__footer">
                         <span class="article-card__author">@article.AuthorDisplay</span>
                         <span class="article-card__more">Czytaj więcej →</span>
@@ -67,18 +98,23 @@
     [Inject]
     public required IFileService fileService { get; set; }
     Dictionary<int, string> imageUrls = new Dictionary<int, string>();
+    private int? confirmDeleteId;
+
     protected override async Task OnParametersSetAsync()
     {
         imageUrls.Clear();
-        foreach(var article in Articles)
+
+        // jedno zapytanie na każde unikalne zdjęcie; brak pliku w bazie nie przewraca całej listy
+        foreach (var fileId in Articles.Select(a => a.FileId).Distinct())
         {
-            var fileName = await fileService.GetFileNameByIdAsync(article.FileId);
-            if(!string.IsNullOrWhiteSpace(fileName))
+            var fileName = await fileService.TryGetFileNameByIdAsync(fileId);
+            if (fileName != null)
             {
-                imageUrls[article.FileId] = $"/Images/{fileName}";
+                imageUrls[fileId] = $"/Images/{fileName}";
             }
         }
     }
+
     private string GetImageUrl(int fileId)
     {
         return imageUrls.TryGetValue(fileId, out var url) ? url : "";
@@ -86,6 +122,8 @@
 
     public async Task RemoveArticleByIdAsync(int id)
     {
+        confirmDeleteId = null;
+
         try
         {
             await articleService.RemoveArticleByIdAsync(id);
@@ -95,6 +133,10 @@
                 Articles.Remove(article);
             }
             toastService.Success("Artykuł został usunięty.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do usuwania artykułów.");
         }
         catch (Exception)
         {

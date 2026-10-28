@@ -31,16 +31,28 @@ namespace SchoolNewspaperBlazorApp.Service
 
         public async Task AddArticleAsync(string title, string text, List<int> fileIds, ArticleType? eventType = null)
         {
-            bool hasPermission = await _permissionService.HasPermissionAsync(EnumPermissions.AddArticle);
-            if (!hasPermission) return;
+            // uprawnienia sprawdzamy tutaj, a nie tylko w interfejsie (brak uprawnień = wyjątek, a nie ciche pominięcie)
+            await EnsureAsync(EnumPermissions.AddArticle);
+            (title, text) = Validate(title, text, eventType);
+
+            if (fileIds == null || fileIds.Count == 0)
+            {
+                throw new InvalidOperationException("Dodając artykuł, musisz dodać zdjęcie.");
+            }
 
             // Autor to zalogowany użytkownik – nie wpisuje się go już ręcznie
             var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
             var idClaim = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(idClaim, out var userId)) return;
+            if (!int.TryParse(idClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException();
+            }
 
             var user = await _authRepository.GetUserByIdAsync(userId);
-            if (user == null) return;
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException();
+            }
 
             var fullName = $"{user.FirstName} {user.LastName}".Trim();
 
@@ -70,13 +82,15 @@ namespace SchoolNewspaperBlazorApp.Service
             Article article = await _articleRepository.GetArticleByIdAsync(id);
             if (article == null)
             {
-                throw new Exception($"Article with ID {id} not found.");
+                throw new KeyNotFoundException($"Article with ID {id} not found.");
             }
             return article;
         }
 
         public async Task RemoveArticleByIdAsync(int id)
         {
+            await EnsureAsync(EnumPermissions.DeleteArticle);
+
             if (id > 0)
             {
                 await _articleRepository.RemoveArticleByIdAsync(id);
@@ -87,6 +101,9 @@ namespace SchoolNewspaperBlazorApp.Service
         public async Task UpdateArticleByIdAsync(int id, string title, string text, int fileId,
             ArticleType? eventType = null)
         {
+            await EnsureAsync(EnumPermissions.EditArticle);
+            (title, text) = Validate(title, text, eventType);
+
             var article = new Article
             {
                 Id = id,
@@ -96,6 +113,50 @@ namespace SchoolNewspaperBlazorApp.Service
                 EventsType = eventType
             };
             await _articleRepository.UpdateArticleByIdAsync(id, article);
+        }
+
+        private async Task EnsureAsync(EnumPermissions permission)
+        {
+            if (!await _permissionService.HasPermissionAsync(permission))
+            {
+                throw new UnauthorizedAccessException();
+            }
+        }
+
+        // Walidacja i czyszczenie – komunikaty trafiają bezpośrednio do użytkownika
+        private static (string Title, string Text) Validate(string? title, string? text, ArticleType? eventType)
+        {
+            title = (title ?? string.Empty).Trim();
+            text = (text ?? string.Empty).Trim();
+
+            if (title.Length == 0)
+            {
+                throw new InvalidOperationException("Podaj tytuł artykułu.");
+            }
+
+            if (title.Length > ArticleContent.MaxTitleLength)
+            {
+                throw new InvalidOperationException(
+                    $"Tytuł może mieć maksymalnie {ArticleContent.MaxTitleLength} znaków.");
+            }
+
+            if (ArticleContent.PlainText(text).Length == 0)
+            {
+                throw new InvalidOperationException("Wpisz treść artykułu.");
+            }
+
+            if (text.Length > ArticleContent.MaxTextLength)
+            {
+                throw new InvalidOperationException(
+                    $"Treść może mieć maksymalnie {ArticleContent.MaxTextLength} znaków.");
+            }
+
+            if (eventType is ArticleType type && !Enum.IsDefined(type))
+            {
+                throw new InvalidOperationException("Nieznany typ artykułu.");
+            }
+
+            return (title, text);
         }
     }
 }

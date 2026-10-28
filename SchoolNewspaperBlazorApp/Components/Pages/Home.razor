@@ -82,22 +82,56 @@
 }
 else
 {
-    <ArticleCard Articles="results" permissions="false" />
+    <ArticleCard Articles="visible" permissions="false" />
+
+    @if (results.Count > visible.Count)
+    {
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 36px 0 12px;">
+            <span style="color: #55637a; font-size: 13px; font-weight: 650;">
+                Wyświetlono @visible.Count z @results.Count
+            </span>
+            <a class="btn btn-primary" href="@LoadMoreHref" style="padding: 10px 28px; font-weight: 750;">
+                Załaduj więcej
+            </a>
+        </div>
+    }
 }
 
 @code
 {
+    // ile artykułów pokazujemy naraz; kolejne porcje dokłada przycisk "Załaduj więcej"
+    private const int PageSize = 20;
+    private const int MaxShown = 2000;
+
     // wartość z adresu: /?q=egzamin
     [Parameter]
     [SupplyParameterFromQuery(Name = "q")]
     public string? Query { get; set; }
 
+    // ile artykułów ma być widocznych: /?ile=40 (domyślnie 20)
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "ile")]
+    public int? Limit { get; set; }
+
     private List<Article> articles = new();
     private List<Article> results = new();
+    private List<Article> visible = new();
     private List<string> suggestions = new();
     private string searchTerm = string.Empty;
 
     private bool HasQuery => searchTerm.Length > 0;
+
+    // kolejna porcja: ten sam adres (z wyszukiwaniem), tylko z większym limitem
+    private string LoadMoreHref
+    {
+        get
+        {
+            var next = visible.Count + PageSize;
+            return HasQuery
+                ? $"/?q={Uri.EscapeDataString(searchTerm)}&ile={next}"
+                : $"/?ile={next}";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -112,7 +146,7 @@ else
             .ToList();
     }
 
-    // uruchamia się po OnInitializedAsync i przy każdej zmianie ?q=
+    // uruchamia się po OnInitializedAsync i przy każdej zmianie ?q= / ?ile=
     protected override void OnParametersSet()
     {
         searchTerm = (Query ?? string.Empty).Trim();
@@ -122,6 +156,9 @@ else
         }
 
         results = HasQuery ? Search(searchTerm) : articles;
+
+        var shown = Math.Clamp(Limit ?? PageSize, PageSize, MaxShown);
+        visible = results.Take(shown).ToList();
     }
 
     // Każde słowo z zapytania musi wystąpić w tytule, treści, autorze lub nazwie kategorii.

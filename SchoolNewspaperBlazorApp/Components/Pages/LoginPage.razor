@@ -74,6 +74,11 @@
                 <p>Zaloguj się, aby przejść do panelu.</p>
             </div>
 
+            @if (!string.IsNullOrWhiteSpace(Error))
+            {
+                <div class="login-error" role="alert">Nieprawidłowy e-mail (login) lub hasło.</div>
+            }
+
                 <form action="/auth/login" method="post">
 
                 <div class="login-field">
@@ -141,6 +146,11 @@
 
 
 @code {
+    // po nieudanym logowaniu /auth/login wraca tutaj z ?error=1
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
     private bool IsLoggedIn;
 
     protected override async Task OnInitializedAsync()

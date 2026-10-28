@@ -3,8 +3,20 @@
 @using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 
+<PageTitle>@(article is null ? "Artykuł" : article.Title) | Gazetka ETI</PageTitle>
 
-@if (article != null)
+@if (notFound)
+{
+    <section class="home-hero">
+        <span class="home-hero__eyebrow">Gazetka szkolna</span>
+        <h1>Nie znaleziono artykułu</h1>
+        <p>Ten artykuł nie istnieje albo został usunięty.</p>
+        <a href="/aktualnosci" class="home-hero__button">
+            Wróć do aktualności <span aria-hidden="true">→</span>
+        </a>
+    </section>
+}
+else if (article != null)
 {
     <article class="article-page">
 
@@ -18,7 +30,21 @@
         <h1 class="article-page__title">@article.Title</h1>
 
 
-        <div class="article-page__content">@article.Text</div>
+        <div class="article-page__content">
+            @foreach (var block in blocks)
+            {
+                if (!string.IsNullOrWhiteSpace(block.Text))
+                {
+                    <p class="article-page__paragraph">@block.Text</p>
+                }
+                if (block.ImageFileId is int fid && blockImageUrls.TryGetValue(fid, out var blockUrl))
+                {
+                    <figure class="article-page__figure">
+                        <img src="@blockUrl" alt="@article.Title" loading="lazy" />
+                    </figure>
+                }
+            }
+        </div>
 
         @if (galleryUrls.Count > 0)
         {
@@ -46,8 +72,11 @@
     public int Id { get; set; }
 
     public Article? article;
+    private bool notFound;
     private string? imageUrl;
     private List<string> galleryUrls = new();
+    private List<ArticleContent.Block> blocks = new();
+    private readonly Dictionary<int, string> blockImageUrls = new();
 
     [Inject]
     public IArticleService articleService { get; set; } = default!;
@@ -57,26 +86,42 @@
 
     protected override async Task OnInitializedAsync()
     {
-        article = await articleService.GetArticleByIdAsync(Id);
-        if (article == null)
+        try
         {
+            article = await articleService.GetArticleByIdAsync(Id);
+        }
+        catch (KeyNotFoundException)
+        {
+            // brak artykułu albo został usunięty – pokazujemy czytelną stronę zamiast błędu 500
+            notFound = true;
             return;
         }
 
-        var fileName = await fileService.GetFileNameByIdAsync(article.FileId);
-        if (!string.IsNullOrWhiteSpace(fileName))
+        var coverName = await fileService.TryGetFileNameByIdAsync(article.FileId);
+        if (coverName != null)
         {
-            imageUrl = $"/Images/{fileName}";
+            imageUrl = $"/Images/{coverName}";
         }
 
-        var galleryImages = article.Images
+        blocks = ArticleContent.Parse(article.Text);
+        foreach (var fileId in blocks.Where(b => b.ImageFileId.HasValue).Select(b => b.ImageFileId!.Value).Distinct())
+        {
+            // brak pliku w bazie – akapit zostaje bez zdjęcia
+            var blockName = await fileService.TryGetFileNameByIdAsync(fileId);
+            if (blockName != null)
+            {
+                blockImageUrls[fileId] = $"/Images/{blockName}";
+            }
+        }
+
+        var galleryImages = (article.Images ?? new List<ArticleImage>())
             .Where(i => i.FileId != article.FileId)
             .OrderBy(i => i.Order);
 
         foreach (var image in galleryImages)
         {
-            var name = await fileService.GetFileNameByIdAsync(image.FileId);
-            if (!string.IsNullOrWhiteSpace(name))
+            var name = await fileService.TryGetFileNameByIdAsync(image.FileId);
+            if (name != null)
             {
                 galleryUrls.Add($"/Images/{name}");
             }

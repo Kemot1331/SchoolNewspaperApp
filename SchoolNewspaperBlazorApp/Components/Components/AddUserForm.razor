@@ -3,7 +3,6 @@
 @inject IAuthService authService
 @inject ToastService toastService
 
-<ToastHost></ToastHost>
 <form @onsubmit="AddUserAsync" @onsubmit:preventDefault>
     <label class="form-label">Login</label>
     <input @bind="Login" class="form-control mb-3" placeholder="Login" autocomplete="off" />
@@ -17,10 +16,11 @@
     <label class="form-label">Nazwisko:</label>
     <input @bind="LastName" type="text" class="form-control mb-3" placeholder="Nazwisko" autocomplete="off" />
 
-    <label class="form-label">Hasło</label>
-    <input @bind="Password" type="password" class="form-control mb-4" placeholder="Hasło" autocomplete="new-password" />
+    <label class="form-label">Hasło tymczasowe</label>
+    <input @bind="Password" type="password" class="form-control mb-1" placeholder="Min. 8 znaków" autocomplete="new-password" />
+    <p class="small mb-4">Użytkownik ustawi własne hasło przy pierwszym logowaniu.</p>
 
-    <button type="submit" class="btn btn-primary w-100">Dodaj</button>
+    <button type="submit" class="btn btn-primary w-100" disabled="@saving">Dodaj</button>
 </form>
 
 
@@ -30,14 +30,22 @@
     private string Email { get; set; } = "";
     private string FirstName { get; set; } = "";
     private string LastName { get; set; } = "";
+    private bool saving;
 
     private async Task AddUserAsync()
     {
-        if (string.IsNullOrWhiteSpace(Login) || string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(Email))
+        if (saving)
         {
-            toastService.Error("Uzupełnij wszystkie pola.");
             return;
         }
+
+        if (string.IsNullOrWhiteSpace(Login) || string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(Email))
+        {
+            toastService.Error("Uzupełnij login, e-mail i hasło.");
+            return;
+        }
+
+        saving = true;
 
         try
         {
@@ -50,9 +58,22 @@
             FirstName = "";
             LastName = "";
         }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do dodawania użytkowników.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // walidacja: zajęty login/e-mail, za krótkie hasło, zły e-mail...
+            toastService.Error(ex.Message);
+        }
         catch (Exception)
         {
             toastService.Error("Nie udało się dodać użytkownika.");
+        }
+        finally
+        {
+            saving = false;
         }
     }
 }

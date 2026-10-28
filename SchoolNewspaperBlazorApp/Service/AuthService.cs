@@ -1,7 +1,7 @@
-﻿using System.Security.Claims;
+﻿using System.Net.Mail;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SchoolNewspaperBlazorApp.Data;
 using SchoolNewspaperBlazorApp.Interfaces.Repository;
@@ -19,6 +19,15 @@ namespace SchoolNewspaperBlazorApp.Service
         private readonly ILogger<AuthService> _logger;
 
         private const int MinPasswordLength = 8;
+        private const int MaxPasswordLength = 128;
+        private const int MaxLoginLength = 100;
+        private const int MaxEmailLength = 254;
+        private const int MaxNameLength = 100;
+
+        // Skrót "na potrzeby porównania" – gdy konta nie ma, i tak liczymy hash, żeby czas odpowiedzi
+        // nie zdradzał, czy taki login/e-mail istnieje w systemie.
+        private static readonly string DummyHash =
+            new PasswordHasher<string>().HashPassword(null!, Guid.NewGuid().ToString());
 
         public AuthService(
             IAuthRepository authRepository,
@@ -35,14 +44,37 @@ namespace SchoolNewspaperBlazorApp.Service
             _authenticationStateProvider = authenticationStateProvider;
             _logger = logger;
         }
-        
+
         public async Task<Dictionary<int, string>> GetAllUsersAsync()
         {
+            // lista kont z e-mailami jest tylko dla administracji
+            await EnsureCanManageUsersAsync();
             return await _authRepository.GetAllUsersAsync();
         }
 
         public async Task AddUserAsync(string login, string password, string email, string firstName, string lastName)
         {
+            // Tylko AddUser (albo Master) – wcześniej konto mógł założyć każdy, kto wywołał tę metodę
+            if (!await _permissionService.HasPermissionAsync(EnumPermissions.AddUser))
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            login = (login ?? string.Empty).Trim();
+            email = (email ?? string.Empty).Trim();
+            firstName = (firstName ?? string.Empty).Trim();
+            lastName = (lastName ?? string.Empty).Trim();
+
+            ValidateAccountFields(login, email, firstName, lastName);
+            ValidatePassword(password);
+
+            if (await _authRepository.IsLoginOrEmailTakenAsync(0, login, email))
+            {
+                throw new InvalidOperationException("Ten login lub e-mail jest już zajęty.");
+            }
+
+            var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
+
             var hasher = new PasswordHasher<string>();
             string passwordHash = hasher.HashPassword(null!, password);
             var user = new User
@@ -51,35 +83,53 @@ namespace SchoolNewspaperBlazorApp.Service
                 Password = passwordHash,
                 Email = email,
                 RegisterDate = DateTime.Now,
-                FirstName = firstName.Trim(),
-                LastName = lastName.Trim(),
+                FirstName = firstName,
+                LastName = lastName,
+                AddBy = state.User.Identity?.Name ?? string.Empty,
                 // hasło ustawił admin, więc przy 1. logowaniu użytkownik ustawia własne
                 MustChangePassword = true
             };
 
             await _authRepository.AddUserAsync(user);
         }
+
+        // Zwraca Id użytkownika albo 0, gdy login/hasło się nie zgadzają
         public async Task<int> CheckIfRegisteredAsync(
             string login, string password)
         {
-            var hasher = new PasswordHasher<string>();
-            // Uwaga: hasła powinny być przechowywane w postaci skrótu (hash) — to tylko przykład działania.
-            try
-            {
-                var user = await _authRepository.CheckIfRegisteredAsync(login, password);
-                var result = hasher.VerifyHashedPassword(login, user.Password, password);
-                if (result == PasswordVerificationResult.Success)
-                {
-                    return user.Id;
-                }
-                else {
-                    return 0;
-                }
-            }
-            catch (Exception) 
+            // odrzucamy puste i absurdalnie długie dane, zanim zaczniemy liczyć hash
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrEmpty(password)
+                || login.Length > MaxEmailLength || password.Length > 256)
             {
                 return 0;
             }
+
+            var hasher = new PasswordHasher<string>();
+
+            User? user = null;
+            try
+            {
+                user = await _authRepository.CheckIfRegisteredAsync(login.Trim(), password);
+            }
+            catch (Exception ex)
+            {
+                // brak konta (albo chwilowy błąd bazy) = nieudane logowanie
+                _logger.LogDebug(ex, "Logowanie nieudane – nie znaleziono konta");
+            }
+
+            if (user == null)
+            {
+                hasher.VerifyHashedPassword(null!, DummyHash, password);
+                return 0;
+            }
+
+            var result = hasher.VerifyHashedPassword(null!, user.Password, password);
+
+            // SuccessRehashNeeded = hasło poprawne, tylko skrót został wyliczony starszymi ustawieniami
+            return result == PasswordVerificationResult.Success
+                   || result == PasswordVerificationResult.SuccessRehashNeeded
+                ? user.Id
+                : 0;
         }
 
         public async Task<string> GetFullNameAsync(int userId)
@@ -90,6 +140,8 @@ namespace SchoolNewspaperBlazorApp.Service
 
         public async Task<UserDetails?> GetUserDetailsAsync(int id)
         {
+            await EnsureCanManageUsersAsync();
+
             var user = await _authRepository.GetUserByIdAsync(id);
             return user == null
                 ? null
@@ -99,26 +151,18 @@ namespace SchoolNewspaperBlazorApp.Service
         public async Task UpdateUserAsync(int id, string login, string email, string firstName, string lastName, string? newPassword)
         {
             // 1. Tylko ManageUser lub Master – sprawdzamy to tutaj, a nie tylko w interfejsie
-            var allowed = await _permissionService.HasPermissionAsync(EnumPermissions.ManageUser)
-                          || await _permissionService.HasPermissionAsync(EnumPermissions.Master);
-            if (!allowed)
-            {
-                throw new UnauthorizedAccessException();
-            }
+            await EnsureCanManageUsersAsync();
 
             login = (login ?? string.Empty).Trim();
             email = (email ?? string.Empty).Trim();
             firstName = (firstName ?? string.Empty).Trim();
             lastName = (lastName ?? string.Empty).Trim();
 
-            if (login.Length == 0 || email.Length == 0)
-            {
-                throw new InvalidOperationException("Login i e-mail są wymagane.");
-            }
+            ValidateAccountFields(login, email, firstName, lastName);
 
-            if (!email.Contains('@'))
+            if (!string.IsNullOrEmpty(newPassword))
             {
-                throw new InvalidOperationException("Podaj poprawny adres e-mail.");
+                ValidatePassword(newPassword);
             }
 
             // 2. Konto administratora (Master) może edytować tylko jego właściciel
@@ -164,10 +208,7 @@ namespace SchoolNewspaperBlazorApp.Service
         // userId pochodzi z ciasteczka logowania (nie z formularza), więc zmieniamy tylko własne hasło
         public async Task ChangePasswordAsync(int userId, string currentPassword, string newPassword)
         {
-            if (string.IsNullOrEmpty(newPassword) || newPassword.Length < MinPasswordLength)
-            {
-                throw new InvalidOperationException($"Nowe hasło musi mieć co najmniej {MinPasswordLength} znaków.");
-            }
+            ValidatePassword(newPassword);
 
             var user = await _authRepository.GetUserByIdAsync(userId);
             if (user == null)
@@ -194,12 +235,7 @@ namespace SchoolNewspaperBlazorApp.Service
         public async Task DeleteUserByIdAsync(int id)
         {
             // 1. Tylko ManageUser lub Master – sprawdzamy to tutaj, a nie tylko w interfejsie
-            var allowed = await _permissionService.HasPermissionAsync(EnumPermissions.ManageUser)
-                          || await _permissionService.HasPermissionAsync(EnumPermissions.Master);
-            if (!allowed)
-            {
-                throw new UnauthorizedAccessException();
-            }
+            await EnsureCanManageUsersAsync();
 
             // 2. Nie usuwamy własnego konta
             var state = await _authenticationStateProvider.GetAuthenticationStateAsync();
@@ -218,6 +254,68 @@ namespace SchoolNewspaperBlazorApp.Service
             }
 
             await _authRepository.DeleteUserByIdAsync(id);
+        }
+
+        // ManageUser (Master ma wszystkie uprawnienia automatycznie)
+        private async Task EnsureCanManageUsersAsync()
+        {
+            if (!await _permissionService.HasPermissionAsync(EnumPermissions.ManageUser))
+            {
+                throw new UnauthorizedAccessException();
+            }
+        }
+
+        private static void ValidateAccountFields(string login, string email, string firstName, string lastName)
+        {
+            if (login.Length == 0 || email.Length == 0)
+            {
+                throw new InvalidOperationException("Login i e-mail są wymagane.");
+            }
+
+            if (login.Length > MaxLoginLength)
+            {
+                throw new InvalidOperationException($"Login może mieć maksymalnie {MaxLoginLength} znaków.");
+            }
+
+            if (!IsValidEmail(email))
+            {
+                throw new InvalidOperationException("Podaj poprawny adres e-mail.");
+            }
+
+            if (firstName.Length > MaxNameLength || lastName.Length > MaxNameLength)
+            {
+                throw new InvalidOperationException($"Imię i nazwisko mogą mieć maksymalnie {MaxNameLength} znaków.");
+            }
+        }
+
+        private static void ValidatePassword(string? password)
+        {
+            if (string.IsNullOrEmpty(password) || password.Length < MinPasswordLength)
+            {
+                throw new InvalidOperationException($"Hasło musi mieć co najmniej {MinPasswordLength} znaków.");
+            }
+
+            if (password.Length > MaxPasswordLength)
+            {
+                throw new InvalidOperationException($"Hasło może mieć maksymalnie {MaxPasswordLength} znaków.");
+            }
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            if (email.Length > MaxEmailLength)
+            {
+                return false;
+            }
+
+            try
+            {
+                return new MailAddress(email).Address == email;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
         }
     }
 }

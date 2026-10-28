@@ -148,7 +148,7 @@
         if (IsLoggedIn)
         {
             var fullName = user.FindFirst("FullName")?.Value;
-            displayName = fullName ?? user.FindFirst("Name")?.Value;
+            displayName = fullName ?? user.Identity?.Name ?? string.Empty;
 
             // link do panelu tylko dla kont, które mają jakiekolwiek uprawnienie
             CanOpenAdminPanel = await permissionService.HasAnyPermissionAsync();

@@ -22,6 +22,7 @@ namespace SchoolNewspaperBlazorApp.Repository
             await context.SaveChangesAsync();
         }
 
+        // Najnowsze na górze – strona główna i panel dostają tę samą kolejność (wcześniej była to kolejność z bazy)
         public async Task<List<Article>> GetAllArticlesAsync()
         {
             await using var context = await _factory.CreateDbContextAsync();
@@ -29,6 +30,8 @@ namespace SchoolNewspaperBlazorApp.Repository
                 .AsNoTracking()
                 .Include(a => a.User)
                     .ThenInclude(u => u!.Role)
+                .OrderByDescending(a => a.PublishDate)
+                .ThenByDescending(a => a.Id)
                 .ToListAsync();
         }
 
@@ -43,19 +46,19 @@ namespace SchoolNewspaperBlazorApp.Repository
 
             if (article == null)
             {
-                throw new Exception($"Article with ID {id} not found.");
+                throw new KeyNotFoundException($"Article with ID {id} not found.");
             }
             return article;
         }
 
         public async Task RemoveArticleByIdAsync(int id)
-        {   
+        {
             await using var context = await _factory.CreateDbContextAsync();
             var article = await context.Articles.FirstOrDefaultAsync(a => a.Id == id);
 
             if (article == null)
             {
-                throw new Exception($"Article with ID {id} not found.");
+                throw new KeyNotFoundException($"Article with ID {id} not found.");
             }
 
             article.IsDeleted = true;
@@ -65,23 +68,39 @@ namespace SchoolNewspaperBlazorApp.Repository
         public async Task UpdateArticleByIdAsync(int id, Article newArticle)
         {
             await using var context = await _factory.CreateDbContextAsync();
-            var articleById = await context.Articles.FirstOrDefaultAsync(a => a.Id == id);
+            var articleById = await context.Articles
+                .Include(a => a.Images)
+                .FirstOrDefaultAsync(a => a.Id == id);
 
             if (articleById == null)
             {
-                throw new Exception($"Article with ID {id} not found.");
+                throw new KeyNotFoundException($"Article with ID {id} not found.");
             }
 
-            if (newArticle.FileId != 0)
+            // Nowa okładka ZASTĘPUJE starą: podmieniamy też wpis w galerii. Wcześniej stara okładka zostawała
+            // w Images i po edycji pojawiała się jako dodatkowe zdjęcie pod artykułem.
+            if (newArticle.FileId != 0 && newArticle.FileId != articleById.FileId)
             {
+                articleById.Images ??= new List<ArticleImage>();
+
+                var oldCover = articleById.Images.FirstOrDefault(i => i.FileId == articleById.FileId);
+                if (oldCover != null)
+                {
+                    oldCover.FileId = newArticle.FileId;
+                }
+                else
+                {
+                    articleById.Images.Add(new ArticleImage { FileId = newArticle.FileId, Order = 0 });
+                }
+
                 articleById.FileId = newArticle.FileId;
             }
-            
+
             articleById.Title = newArticle.Title;
             articleById.Text = newArticle.Text;
             articleById.EventsType = newArticle.EventsType;
-                
-             await context.SaveChangesAsync();
+
+            await context.SaveChangesAsync();
         }
     }
 }

@@ -1,17 +1,19 @@
 ﻿@using SchoolNewspaperBlazorApp.Data
 @using SchoolNewspaperBlazorApp.Interfaces.Service
 @using SchoolNewspaperBlazorApp.Service
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IArticleService articleService
 @inject IFileService fileService
 @inject ToastService toastService
-    
+@inject AuthenticationStateProvider authStateProvider
+
 <div class="add-article-form">
     <h1 class="add-article-form__title">@(IsEdit ? "Edytuj artykuł" : Texts.Heading)</h1>
 
     <label class="form-label">@(IsEdit ? "Nowe zdjęcie (zastąpi obecne)" : "Zdjęcia")</label>
     <InputFile @key="formKey"
                OnChange="ChoosePhotos"
-               accept="image/*"
+               accept=".jpg,.jpeg,.png,.webp"
                multiple="@(!IsEdit)"
                class="form-control mb-3" />
 
@@ -22,7 +24,7 @@
             {
                 var index = i;
                 <div style="position: relative;">
-                    <img src="@photos[index].Preview"
+                    <img src="@photos[index].PreviewUrl"
                          alt="Zdjęcie @(index + 1)"
                          style="width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid #dde3ec;" />
 
@@ -44,7 +46,7 @@
     }
 
     <form @onsubmit="SubmitForm" @onsubmit:preventDefault>
-        
+
         <label class="form-label">Typ wydarzenia</label>
         <select value="@(eventType?.ToString() ?? "")" @onchange="OnTypeChanged" class="form-select mb-4">
             <option value="">Zwykły artykuł (bez typu)</option>
@@ -53,22 +55,134 @@
                 <option value="@t">@t.ToLabel()</option>
             }
         </select>
-        
+
         <label class="form-label">@Texts.TitleLabel</label>
-        <input @bind="title" class="form-control mb-3"
+        <input @bind="title" @bind:event="oninput" class="form-control mb-3"
+               maxlength="@ArticleContent.MaxTitleLength"
                placeholder="@Texts.TitlePlaceholder" />
 
         <label class="form-label">@Texts.TextLabel</label>
-        <textarea @bind="text" class="form-control mb-3"
-                  rows="6" placeholder="@Texts.TextPlaceholder" style="resize: none"></textarea>
+        <div class="paragraph-list mb-2">
+            @for (var i = 0; i < paragraphs.Count; i++)
+            {
+                var par = paragraphs[i];
+                var number = i + 1;
+                <div class="paragraph-item" @key="par.Key">
+                    <div class="paragraph-item__header">
+                        <span class="paragraph-item__badge" aria-hidden="true">@number</span>
+                        <span class="paragraph-item__label">Akapit @number</span>
 
-        <button type="submit" class="btn btn-primary w-100">@(IsEdit ? "Zatwierdź edycje" : Texts.Submit)</button>
+                        @if (par.HasPhoto)
+                        {
+                            <span class="paragraph-item__tag">ze zdjęciem</span>
+                        }
+
+                        <span class="paragraph-item__spacer"></span>
+
+                        @if (paragraphs.Count > 1)
+                        {
+                            <button type="button" class="paragraph-item__delete"
+                                    aria-label="Usuń akapit @number"
+                                    @onclick="() => RemoveParagraph(par)">Usuń akapit</button>
+                        }
+                    </div>
+
+                    <div class="paragraph-item__row">
+                        <textarea @bind="par.Text" @bind:event="oninput"
+                                  class="form-control paragraph-item__text"
+                                  rows="4"
+                                  placeholder="@(i == 0 ? Texts.TextPlaceholder : "Kolejny akapit...")"
+                                  aria-label="Akapit @number"></textarea>
+                    </div>
+
+                    @if (par.HasPhoto)
+                    {
+                        <div class="paragraph-photo">
+                            <img src="@par.PhotoUrl" alt="Zdjęcie do akapitu @number" />
+                            <button type="button"
+                                    class="btn btn-sm btn-danger paragraph-photo__remove"
+                                    aria-label="Usuń zdjęcie z akapitu @number"
+                                    @onclick="() => RemoveParagraphPhoto(par)">×</button>
+                        </div>
+                    }
+
+                    <div class="paragraph-item__footer">
+                        @if (!par.HasPhoto)
+                        {
+                            <label class="paragraph-photo-btn" title="Dodaj zdjęcie do akapitu" aria-label="Dodaj zdjęcie do akapitu @number">
+                                <span class="paragraph-photo-btn__icon" aria-hidden="true">+</span>
+                                <span>Dodaj zdjęcie</span>
+                                <InputFile @key="@($"{par.Key}-{par.PickerVersion}")"
+                                           OnChange="@(e => ChooseParagraphPhoto(par, e))"
+                                           accept=".jpg,.jpeg,.png,.webp"
+                                           class="paragraph-photo-btn__input" />
+                            </label>
+                        }
+                        else
+                        {
+                            <span></span>
+                        }
+
+                        <span class="paragraph-item__count">@par.Text.Length znaków</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <button type="button" class="paragraph-add mb-4" @onclick="AddParagraph">
+            <span aria-hidden="true">+</span> Dodaj akapit
+        </button>
+
+        <label class="form-label">Podgląd na stronie głównej</label>
+        <div class="article-preview mb-4">
+            <div class="article-card article-card--preview">
+                <div class="article-card__img-wrap">
+                    @if (!string.IsNullOrEmpty(PreviewCoverUrl))
+                    {
+                        <img src="@PreviewCoverUrl" class="article-card__img-bg" alt="" aria-hidden="true" />
+                        <img src="@PreviewCoverUrl" class="article-card__img" alt="Okładka artykułu" />
+                    }
+                    else
+                    {
+                        <div class="article-card__placeholder">Brak zdjęcia okładki</div>
+                    }
+                </div>
+                <div class="article-card__body">
+                    <h5 class="article-card__title">@(string.IsNullOrWhiteSpace(title) ? "Tytuł artykułu" : title)</h5>
+                    <p class="article-card__text">@(string.IsNullOrWhiteSpace(PreviewText) ? "Tutaj pojawi się początek treści artykułu..." : PreviewText)</p>
+                    <div class="article-card__footer">
+                        <span class="article-card__author">@PreviewAuthor</span>
+                        <span class="article-card__more">Czytaj więcej →</span>
+                    </div>
+                </div>
+            </div>
+            <small class="article-preview__hint">Tak kafelek będzie wyglądał na stronie głównej i w aktualnościach.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100" disabled="@saving">
+            @(saving ? "Zapisywanie..." : (IsEdit ? "Zatwierdź edycje" : Texts.Submit))
+        </button>
 
         @if (IsEdit && CanDelete)
         {
-            <button type="button" class="btn btn-outline-danger w-100 mt-2" @onclick="DeleteAsync">
-                Usuń artykuł
-            </button>
+            if (confirmDelete)
+            {
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <span class="small">Na pewno usunąć ten artykuł?</span>
+                    <button type="button" class="btn btn-sm btn-danger" disabled="@saving" @onclick="DeleteAsync">
+                        Tak, usuń
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => confirmDelete = false">
+                        Nie
+                    </button>
+                </div>
+            }
+            else
+            {
+                <button type="button" class="btn btn-outline-danger w-100 mt-2" @onclick="() => confirmDelete = true">
+                    Usuń artykuł
+                </button>
+            }
         }
     </form>
 </div>
@@ -76,7 +190,11 @@
 
 @code {
     private const int MaxFiles = 10;
-    private readonly List<(IBrowserFile File, string Preview)> photos = new();
+
+    // Zdjęcia okładki wczytane do pamięci zaraz po wybraniu (nie trzymamy już IBrowserFile)
+    private readonly List<ImageData> photos = new();
+    // Id zdjęć okładki, które już poszły na serwer – przy ponownej próbie zapisu nie wysyłamy ich drugi raz
+    private List<int>? uploadedCoverIds;
 
     [Parameter]
     public bool IsEdit { get; set; }
@@ -88,7 +206,36 @@
     public EventCallback OnDeleted { get; set; }
 
     private string title = "";
-    private string text = "";
+    private readonly List<ParagraphDraft> paragraphs = new() { new ParagraphDraft() };
+    private int? loadedArticleId;
+    private string? currentCoverUrl;
+    private int coverFileId;
+    private string currentUserName = "";
+    private bool saving;
+    private bool confirmDelete;
+
+    private sealed class ParagraphDraft
+    {
+        public Guid Key { get; } = Guid.NewGuid();
+        public string Text { get; set; } = "";
+        // nowe zdjęcie wybrane w tym formularzu (jeszcze nie wysłane na serwer)
+        public ImageData? NewImage { get; set; }
+        // zdjęcie, które już jest zapisane w bazie
+        public int? ExistingFileId { get; set; }
+        public string? PhotoUrl { get; set; }
+        public int PickerVersion { get; set; }
+        public bool HasPhoto => !string.IsNullOrEmpty(PhotoUrl);
+    }
+
+    // Podgląd kafelka (tak jak w ArticleCard)
+    private string? PreviewCoverUrl => photos.Count > 0 ? photos[0].PreviewUrl : currentCoverUrl;
+
+    private string PreviewText => ArticleContent.PlainText(
+        string.Join("\n\n", paragraphs.Select(p => p.Text)));
+
+    private string PreviewAuthor => IsEdit && Article != null
+        ? Article.AuthorDisplay
+        : (string.IsNullOrWhiteSpace(currentUserName) ? "Autor" : currentUserName);
     private ArticleType? eventType;
     private int formKey;
 
@@ -144,64 +291,229 @@
         eventType = Enum.TryParse<ArticleType>(e.Value?.ToString(), out var parsed) ? parsed : null;
     }
 
-    protected override void OnParametersSet()
+    protected override async Task OnInitializedAsync()
     {
-        if (IsEdit && Article != null)
+        var state = await authStateProvider.GetAuthenticationStateAsync();
+        currentUserName = state.User.FindFirst("FullName")?.Value ?? state.User.Identity?.Name ?? "";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // wczytujemy artykuł tylko raz – ponowne renderowanie rodzica nie może nadpisać wpisanych zmian
+        if (!IsEdit || Article == null || loadedArticleId == Article.Id)
         {
-            title = Article.Title;
-            text = Article.Text;
-            eventType = Article.EventsType;
+            return;
         }
+
+        loadedArticleId = Article.Id;
+        title = Article.Title;
+        eventType = Article.EventsType;
+        coverFileId = Article.FileId;
+        currentCoverUrl = await GetImageUrlAsync(Article.FileId);
+
+        paragraphs.Clear();
+        foreach (var block in ArticleContent.Parse(Article.Text))
+        {
+            var draft = new ParagraphDraft { Text = block.Text, ExistingFileId = block.ImageFileId };
+            if (block.ImageFileId is int fileId)
+            {
+                draft.PhotoUrl = await GetImageUrlAsync(fileId);
+                if (draft.PhotoUrl == null)
+                {
+                    draft.ExistingFileId = null;
+                }
+            }
+            paragraphs.Add(draft);
+        }
+
+        if (paragraphs.Count == 0)
+        {
+            paragraphs.Add(new ParagraphDraft());
+        }
+    }
+
+    private async Task<string?> GetImageUrlAsync(int fileId)
+    {
+        var name = await fileService.TryGetFileNameByIdAsync(fileId);
+        return name == null ? null : $"/Images/{name}";
+    }
+
+    private void AddParagraph() => paragraphs.Add(new ParagraphDraft());
+
+    private void RemoveParagraph(ParagraphDraft paragraph)
+    {
+        if (paragraphs.Count > 1)
+        {
+            paragraphs.Remove(paragraph);
+        }
+    }
+
+    // Zdjęcie akapitu wczytujemy do pamięci OD RAZU. Po wybraniu pliku przycisk "+" (a z nim komponent InputFile)
+    // znika ze strony, a przeglądarka przestaje wtedy udostępniać plik – odczyt dopiero przy zapisie się nie udawał.
+    private async Task ChooseParagraphPhoto(ParagraphDraft paragraph, InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var image = await fileService.ReadImageAsync(e.File);
+
+            paragraph.NewImage = image;
+            paragraph.ExistingFileId = null;
+            paragraph.PhotoUrl = image.PreviewUrl;
+        }
+        catch (InvalidOperationException ex)
+        {
+            toastService.Error(ex.Message);
+            // nowy InputFile, żeby można było wybrać ten sam plik jeszcze raz
+            paragraph.PickerVersion++;
+        }
+        catch (Exception)
+        {
+            toastService.Error("Nie udało się wczytać zdjęcia. Spróbuj ponownie.");
+            paragraph.PickerVersion++;
+        }
+    }
+
+    private static void RemoveParagraphPhoto(ParagraphDraft paragraph)
+    {
+        paragraph.NewImage = null;
+        paragraph.ExistingFileId = null;
+        paragraph.PhotoUrl = null;
+        paragraph.PickerVersion++;
+    }
+
+    // Wysyła nowe zdjęcia akapitów i składa całą treść artykułu w jeden tekst
+    private async Task<string> BuildTextAsync()
+    {
+        var blocks = new List<ArticleContent.Block>();
+        foreach (var paragraph in paragraphs)
+        {
+            int? imageId = paragraph.ExistingFileId;
+            if (paragraph.NewImage != null)
+            {
+                imageId = await fileService.UploadImageAsync(paragraph.NewImage);
+                // zapamiętujemy ID, żeby ponowny zapis nie wysyłał tego samego pliku drugi raz
+                paragraph.ExistingFileId = imageId;
+                paragraph.NewImage = null;
+                // zamiast ciężkiego podglądu (base64) pokazujemy już zapisany plik
+                paragraph.PhotoUrl = await GetImageUrlAsync(imageId.Value) ?? paragraph.PhotoUrl;
+            }
+            blocks.Add(new ArticleContent.Block(paragraph.Text, imageId));
+        }
+
+        return ArticleContent.Serialize(blocks);
+    }
+
+    private void ResetParagraphs()
+    {
+        paragraphs.Clear();
+        paragraphs.Add(new ParagraphDraft());
     }
 
     private async Task SubmitForm()
     {
+        if (saving)
+        {
+            return;
+        }
+
+        // wszystko sprawdzamy ZANIM cokolwiek wyślemy na serwer, żeby nie zostawiać osieroconych zdjęć
+        var cleanTitle = title.Trim();
+        if (cleanTitle.Length == 0)
+        {
+            toastService.Error("Podaj tytuł.");
+            return;
+        }
+
+        if (cleanTitle.Length > ArticleContent.MaxTitleLength)
+        {
+            toastService.Error($"Tytuł może mieć maksymalnie {ArticleContent.MaxTitleLength} znaków.");
+            return;
+        }
+
+        if (!paragraphs.Any(p => !string.IsNullOrWhiteSpace(p.Text)))
+        {
+            toastService.Error("Wpisz treść artykułu.");
+            return;
+        }
+
+        if (paragraphs.Sum(p => p.Text.Length) > ArticleContent.MaxTextLength)
+        {
+            toastService.Error($"Treść może mieć maksymalnie {ArticleContent.MaxTextLength} znaków.");
+            return;
+        }
+
         if (!IsEdit && photos.Count == 0)
         {
             toastService.Error("Dodając artykuł, musisz dodać zdjęcie.");
             return;
         }
 
+        saving = true;
+
         try
         {
+            if (photos.Count > 0)
+            {
+                uploadedCoverIds ??= await fileService.UploadImagesAsync(photos);
+            }
+
+            var text = await BuildTextAsync();
+
             if (IsEdit && Article != null)
             {
                 // bez nowego zdjęcia zostaje dotychczasowa okładka
-                int fileId = Article.FileId;
+                var fileId = uploadedCoverIds is { Count: > 0 } ? uploadedCoverIds[0] : coverFileId;
+
+                await articleService.UpdateArticleByIdAsync(Article.Id, cleanTitle, text, fileId, eventType);
+
+                coverFileId = fileId;
                 if (photos.Count > 0)
                 {
-                    fileId = await fileService.UploadImage(photos[0].File);
+                    currentCoverUrl = await GetImageUrlAsync(fileId) ?? photos[0].PreviewUrl;
                 }
 
-                await articleService.UpdateArticleByIdAsync(Article.Id, title, text, fileId, eventType);
                 toastService.Success("Artykuł został zapisany.");
                 ClearPhotos();
             }
             else
             {
-                var fileIds = await fileService.UploadImagesAsync(photos.Select(p => p.File));
-                await articleService.AddArticleAsync(title, text, fileIds, eventType);
+                await articleService.AddArticleAsync(cleanTitle, text, uploadedCoverIds ?? new List<int>(), eventType);
                 toastService.Success("Artykuł został dodany.");
 
                 // czyścimy formularz, żeby nie dodać tego samego artykułu dwa razy
                 title = "";
-                text = "";
+                ResetParagraphs();
                 eventType = null;
                 ClearPhotos();
             }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do tej operacji.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // walidacja z serwisu (np. za długi tytuł) – komunikat jest po polsku
+            toastService.Error(ex.Message);
         }
         catch (Exception)
         {
             toastService.Error("Nie udało się zapisać artykułu.");
         }
+        finally
+        {
+            saving = false;
+        }
     }
 
     private async Task DeleteAsync()
     {
-        if (!CanDelete || Article == null)
+        if (!CanDelete || Article == null || saving)
         {
             return;
         }
+
+        saving = true;
 
         try
         {
@@ -209,9 +521,18 @@
             toastService.Success("Artykuł został usunięty.");
             await OnDeleted.InvokeAsync();
         }
+        catch (UnauthorizedAccessException)
+        {
+            toastService.Error("Nie masz uprawnień do usuwania artykułów.");
+        }
         catch (Exception)
         {
             toastService.Error("Nie udało się usunąć artykułu.");
+        }
+        finally
+        {
+            confirmDelete = false;
+            saving = false;
         }
     }
 
@@ -224,7 +545,9 @@
         }
         catch (InvalidOperationException)
         {
-            toastService.Error($"Możesz wybrać maksymalnie {MaxFiles} zdjęć naraz.");
+            toastService.Error(IsEdit
+                ? "Możesz wybrać tylko jedno zdjęcie."
+                : $"Możesz wybrać maksymalnie {MaxFiles} zdjęć naraz.");
             return;
         }
 
@@ -234,29 +557,42 @@
             photos.Clear();
         }
 
+        // lista zdjęć się zmienia, więc wcześniej wysłane (po nieudanym zapisie) nie pasują już do wyboru
+        uploadedCoverIds = null;
+
         foreach (var f in selected)
         {
             if (photos.Count >= MaxFiles)
             {
+                toastService.Error($"Możesz dodać maksymalnie {MaxFiles} zdjęć.");
                 break;
             }
 
             try
             {
-                photos.Add((f, await fileService.GetPreviewAsync(f)));
+                photos.Add(await fileService.ReadImageAsync(f));
+            }
+            catch (InvalidOperationException ex)
+            {
+                toastService.Error(ex.Message);
             }
             catch (Exception)
             {
-                toastService.Error($"Nie udało się wczytać pliku {f.Name} (maks. 5 MB).");
+                toastService.Error($"Nie udało się wczytać pliku „{f.Name}”.");
             }
         }
     }
 
-    private void RemovePhoto(int index) => photos.RemoveAt(index);
+    private void RemovePhoto(int index)
+    {
+        photos.RemoveAt(index);
+        uploadedCoverIds = null;
+    }
 
     private void ClearPhotos()
     {
         photos.Clear();
+        uploadedCoverIds = null;
         formKey++;
     }
 }

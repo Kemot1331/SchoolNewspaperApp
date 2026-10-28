@@ -1,5 +1,9 @@
+﻿using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using SchoolNewspaperBlazorApp.Components;
@@ -8,7 +12,6 @@ using SchoolNewspaperBlazorApp.Interfaces.Repository;
 using SchoolNewspaperBlazorApp.Interfaces.Service;
 using SchoolNewspaperBlazorApp.Repository;
 using SchoolNewspaperBlazorApp.Service;
-using System.Security.Claims;
 
 namespace SchoolNewspaperBlazorApp
 {
@@ -16,6 +19,15 @@ namespace SchoolNewspaperBlazorApp
     {
         public static void Main(string[] args)
         {
+            // Pomocnik do ręcznego założenia konta (np. Master w SQL):
+            //   dotnet run -- --hash TwojeHaslo
+            // wypisuje skrót hasła i kończy działanie. Zastępuje wypisywanie skrótu "admin123" przy każdym starcie.
+            if (args.Length == 2 && args[0] == "--hash")
+            {
+                Console.WriteLine(new PasswordHasher<string>().HashPassword(null!, args[1]));
+                return;
+            }
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
@@ -54,30 +66,95 @@ namespace SchoolNewspaperBlazorApp
                     options.Cookie.SameSite = SameSiteMode.Lax;
                     options.ExpireTimeSpan = TimeSpan.FromHours(1);
                     options.SlidingExpiration = true;
+
+                    // Konto usunięte przez admina przestaje działać od razu, a nie dopiero po wygaśnięciu ciasteczka
+                    options.Events.OnValidatePrincipal = async context =>
+                    {
+                        var idValue = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                        var authRepository = context.HttpContext.RequestServices.GetRequiredService<IAuthRepository>();
+
+                        User? user = null;
+                        if (int.TryParse(idValue, out var userId))
+                        {
+                            user = await authRepository.GetUserByIdAsync(userId);
+                        }
+
+                        if (user == null)
+                        {
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
+                    };
                 });
             builder.Services.AddAuthorization();
             builder.Services.AddCascadingAuthenticationState();
 
+            // Ograniczenie prób logowania / zmiany hasła (ochrona przed zgadywaniem haseł).
+            // Uwaga: za reverse proxy trzeba włączyć UseForwardedHeaders, inaczej wszyscy będą mieć IP proxy.
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.AddPolicy("login", httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 10,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0
+                        }));
+            });
+
             var app = builder.Build();
+            var isDevelopment = app.Environment.IsDevelopment();
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
-                app.UseExceptionHandler("/Error");
-               
+                app.UseExceptionHandler("/Error", createScopeForErrors: true);
+
                 app.UseHsts();
             }
+
+            // Nagłówki bezpieczeństwa (clickjacking, sniffing typu pliku, wycieki adresu w Referer)
+            app.Use(async (context, next) =>
+            {
+                var headers = context.Response.Headers;
+                headers["X-Content-Type-Options"] = "nosniff";
+                headers["X-Frame-Options"] = "DENY";
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+                headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+
+                // CSP tylko poza Development – w trybie deweloperskim narzędzia (hot reload) wstrzykują własne skrypty.
+                // Gdyby po wdrożeniu coś przestało się ładować, to pierwsza linia do poluzowania/usunięcia.
+                if (!isDevelopment)
+                {
+                    headers["Content-Security-Policy"] =
+                        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; " +
+                        "script-src 'self'; connect-src 'self' ws: wss:; font-src 'self' data:; " +
+                        "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+                }
+
+                await next();
+            });
+
             app.MapPost("/auth/login", async (
                 HttpContext context,
                 IAuthService authService) =>
             {
+                if (!context.Request.HasFormContentType)
+                {
+                    return Results.Redirect("/login");
+                }
+
                 var form = await context.Request.ReadFormAsync();
                 string email = form["Email"].ToString();
                 string password = form["Password"].ToString();
                 int userId =  await authService.CheckIfRegisteredAsync(email, password);
                 if (userId == 0)
                 {
-                    return Results.Redirect("/");
+                    // wracamy na stronę logowania z komunikatem (wcześniej użytkownik lądował na stronie głównej bez żadnej informacji)
+                    return Results.Redirect("/login?error=1");
                 }
 
                 // imię i nazwisko pokazujemy w nagłówku obok "Wyloguj się"
@@ -107,7 +184,7 @@ namespace SchoolNewspaperBlazorApp
                 await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
                     principal);
                 return Results.Redirect(mustChangePassword ? "/zmiana-hasla" : "/adminPanel");
-            });
+            }).RequireRateLimiting("login");
 
             // zmiana własnego hasła (formularz ze strony /zmiana-hasla)
             app.MapPost("/auth/change-password", async (
@@ -118,6 +195,11 @@ namespace SchoolNewspaperBlazorApp
                     || !int.TryParse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
                 {
                     return Results.Redirect("/login");
+                }
+
+                if (!context.Request.HasFormContentType)
+                {
+                    return Results.Redirect("/zmiana-hasla");
                 }
 
                 var form = await context.Request.ReadFormAsync();
@@ -149,30 +231,33 @@ namespace SchoolNewspaperBlazorApp
                 await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(identity));
                 return Results.Redirect("/adminPanel");
-            });
-            
+            }).RequireRateLimiting("login");
+
             //wylogowanie sie
             app.MapPost("/auth/logout", async (HttpContext context) =>
             {
                 await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 return Results.Redirect("/");
             });
-            
-            var imagesPath = Path.Combine(
-                builder.Environment.ContentRootPath,
-                "Images"
-            );
-            Directory.CreateDirectory(imagesPath);
-            app.UseStaticFiles();
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new PhysicalFileProvider(imagesPath),
-                RequestPath = "/Images"
-            });
 
             app.UseHttpsRedirection();
 
+            // zdjęcia wgrywane przez panel trafiają do wwwroot/Images
             app.UseStaticFiles();
+
+            // starsze zdjęcia leżące w folderze Images obok projektu (poza wwwroot)
+            var legacyImagesPath = Path.Combine(
+                builder.Environment.ContentRootPath,
+                "Images"
+            );
+            if (Directory.Exists(legacyImagesPath))
+            {
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new PhysicalFileProvider(legacyImagesPath),
+                    RequestPath = "/Images"
+                });
+            }
 
             // Kto musi zmienić hasło, widzi tylko stronę zmiany hasła (nie wejdzie ręcznie np. na /adminPanel)
             app.UseAuthentication();
@@ -198,14 +283,12 @@ namespace SchoolNewspaperBlazorApp
 
             // musi być po UseAuthentication, inaczej [Authorize] widzi użytkownika jako niezalogowanego
             app.UseAuthorization();
+            app.UseRateLimiter();
             app.UseAntiforgery();
 
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
 
-            var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<string>();
-            Console.WriteLine(hasher.HashPassword(null!, "admin123"));
-            
             app.Run();
         }
     }

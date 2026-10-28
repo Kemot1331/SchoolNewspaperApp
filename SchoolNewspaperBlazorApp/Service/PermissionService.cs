@@ -23,6 +23,8 @@ public class PermissionService : IPermissionService
         _logger = logger;
     }
 
+    // Master ma dostęp do wszystkiego – dzięki temu serwisy nie muszą same sprawdzać "uprawnienie albo Master"
+    // (wcześniej Master widział przyciski w panelu, ale zapis cicho się nie udawał).
     public async Task<bool> HasPermissionAsync(EnumPermissions permission)
     {
         var authState = await _authenticationStateProvider
@@ -30,13 +32,15 @@ public class PermissionService : IPermissionService
 
         var principal = authState.User;
 
-        if (principal.Identity?.IsAuthenticated != true)
+        if (principal.Identity?.IsAuthenticated != true
+            || !int.TryParse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
         {
             return false;
         }
 
-        return await _permissionRepository
-            .HasPermissionAsync(principal, permission);
+        // jedno zapytanie zamiast dwóch: pobieramy wszystkie uprawnienia konta
+        var permissions = await _permissionRepository.GetUserPermissionsAsync(userId);
+        return permissions.Contains(EnumPermissions.Master) || permissions.Contains(permission);
     }
 
     // true, jeśli konto ma choć jedno uprawnienie (np. do wyświetlenia linku do panelu)
@@ -62,14 +66,15 @@ public class PermissionService : IPermissionService
 
     public async Task SetUserPermissionsAsync(int userId, IEnumerable<EnumPermissions> permissions)
     {
-        // Tylko ManageUser lub Master – sprawdzamy tutaj, a nie tylko w interfejsie
-        var allowed = await HasPermissionAsync(EnumPermissions.ManageUser)
-                      || await HasPermissionAsync(EnumPermissions.Master);
-        if (!allowed)
+        // Tylko ManageUser (albo Master, który ma wszystko) – sprawdzamy tutaj, a nie tylko w interfejsie
+        if (!await HasPermissionAsync(EnumPermissions.ManageUser))
         {
             throw new UnauthorizedAccessException();
         }
 
-        await _permissionRepository.SetUserPermissionsAsync(userId, permissions);
+        // odrzucamy wartości spoza enuma (np. wysłane ręcznie)
+        var valid = permissions.Where(p => Enum.IsDefined(p)).ToList();
+
+        await _permissionRepository.SetUserPermissionsAsync(userId, valid);
     }
 }
