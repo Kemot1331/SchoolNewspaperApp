@@ -32,10 +32,19 @@
                type="search"
                name="q"
                value="@searchTerm"
+               list="home-search-suggestions"
                placeholder="Szukaj artykułów, wydarzeń, ogłoszeń…"
                maxlength="100"
                autocomplete="off"
                enterkeyhint="search" />
+
+        @* Podpowiedzi przeglądarki: po wpisaniu np. "te" pojawia się tytuł "test" *@
+        <datalist id="home-search-suggestions">
+            @foreach (var title in suggestions)
+            {
+                <option value="@title"></option>
+            }
+        </datalist>
 
         <button type="submit" class="home-search__submit">Szukaj</button>
     </form>
@@ -85,6 +94,7 @@ else
 
     private List<Article> articles = new();
     private List<Article> results = new();
+    private List<string> suggestions = new();
     private string searchTerm = string.Empty;
 
     private bool HasQuery => searchTerm.Length > 0;
@@ -92,6 +102,14 @@ else
     protected override async Task OnInitializedAsync()
     {
         articles = await articleService.GetAllArticlesAsync();
+
+        // tytuły do podpowiedzi w polu wyszukiwania (najnowsze pierwsze, bez powtórzeń)
+        suggestions = articles
+            .Select(a => a.Title.Trim())
+            .Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(200)
+            .ToList();
     }
 
     // uruchamia się po OnInitializedAsync i przy każdej zmianie ?q=
